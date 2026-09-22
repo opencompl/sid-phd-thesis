@@ -34,15 +34,15 @@ For the verification pipeline, I build on \bvdecide{}, Lean's formally verified 
 %and the standard remedy (used, for example, by the Alive peephole rewrite verifier) is to enumerate the widths and bitblast each one separately.
 First, I create new state-of-the-art algorithms for parametric bitvector theory,
 which is a generalization of fixed-width bitvectors, where the width is a symbolic variable rather than a concrete number.
-This is necessary for verifying compiler rewrites, since a rewrite must be correct at every width.
-Until now, the standard technique, due to the unavailability of good decision procedures for parametric bitvectors,
+This is necessary for verifying compiler rewrites, as a rewrite must be correct at all bitwidths.
+Until now, the standard technique, as good decision procedures for parametric bitvectors are unavailable,
 has been to enumerate the widths and bitblast each one separately.
 I show that this is unnecessary. Predicates that must hold at all widths reduce to reachability in a finite automaton,
 which is decided by $k$-induction and regular language emptiness.
 Next, by an encoding trick that writes widths as bitmasks,
 any formula over $n$ symbolic widths reduces to an equisatisfiable single-width one.
 This trades an exponential number of solver queries for a \emph{single} query,
-and carves out a new sound and complete fragment of the multi-width theory.
+and provides a new sound and complete fragment of multi-width theory.
 
 Second, I build the first formally verified floating-point bitblaster.
 Floating-point semantics is intricate, and machine learning is pushing exotic formats such as E4M3 and E5M2 into production hardware,
