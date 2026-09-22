@@ -6,9 +6,12 @@ Download:
 
 ## Currently Working On
 
+- Overviews of each chapter, don't need to reintro stuff.
 - Intro to mono-width chapter, make it consistent with everything else
+- Drop re-explanation of FSM from multi-width chapter.
 - Fixed width BV chapter, drop details about AIGs, give more details
   about circuit construction, CNF, LRAT, since these are what gets used later.
+- widow.
 
 
 
