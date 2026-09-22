@@ -340,13 +340,15 @@ Our mechanized semantics of multiplication (left) is a direct transcription of t
 \noindent
 \begin{minipage}[c]{0.5\linewidth}
 \begin{lean4}[fontsize=\footnotesize]
--- The SMT-LIB semantics of multiplication.
-def mul (M : RoundMethod (PackedFloat e s) R)
+--  Multiplication SMT-LIB semantics.
+def mul 
+    (M : RoundMethod (PackedFloat e s) R)
     (rm : RoundingMode)
     (x y : PackedFloat e s) : PackedFloat e s :=
   -- the exact product, computed in R
   let z    := M.embed x * M.embed y
-  -- IEEE sign rule: XOR of the operand signs
+  -- IEEE sign rule: 
+  --  XOR of the operand signs
   let sign := x.sign ^ y.sign
   -- round back into the format
   M.round rm sign z
