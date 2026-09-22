@@ -4,6 +4,13 @@ Download:
 [Thesis (with comments)](../../releases/latest/download/thesis.pdf) |
 [Submission (without comments)](../../releases/latest/download/thesis-submission.pdf)
 
+## Currently Working On
+
+- Intro to mono-width chapter, make it consistent with everything else
+- Fixed width BV chapter, drop details about AIGs, give more details
+  about circuit construction, CNF, LRAT, since these are what gets used later.
+
+
 
 ## Build it yourself
 
@@ -20,6 +27,7 @@ make both     # both of the above
 `make` regenerates `.latexminted_config` (the SHA256 of the custom Lean 4
 lexer under `tools/lexers/`) before compiling; if a code listing suddenly fails
 to highlight, `make clean` refreshes those hashes.
+
 
 
 --------
