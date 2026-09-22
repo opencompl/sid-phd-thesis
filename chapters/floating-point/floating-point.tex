@@ -122,6 +122,14 @@ addition circuit. The core data structures---\texttt{PackedFloat},
 \texttt{UnpackedFloat}, and \texttt{EUnpackedFloat}---were designed in
 collaboration with Abdal, after studying the design of SymFPU.
 
+\section{Overview}
+\label{sec:fp:chapter-overview}
+% Two paragraphs, essentially no citations.
+% P1: the question this chapter answers, where it sits in the thesis argument,
+%     and the result in one plain sentence.
+% P2: the approximations made to the theoretically-justified algorithm, then
+%     the empirical payoff.
+
 \lettrine{F}{loating-point} verification is central to trustworthy numerical
 computing. Existing approaches fall into two camps: proof assistants that
 provide precise formalizations of floating-point semantics, such as
@@ -133,27 +141,17 @@ on the remarkable progress in bitvector SMT solving---including the verified
 bitblasting infrastructure of \cref{ch:background-bv}---but the floating-point
 reductions themselves are subtle, complex, and had never been verified.
 
-This chapter closes the width axis of the thesis and opens the value axis. The
-two preceding chapters made bitvector \emph{widths} symbolic while the values
-stayed plain machine integers; here the widths return to being concrete and the
-values become the most intricate objects compilers routinely reason about. The
-same verified-bitblasting idea carries over: we mechanize the SMT-LIB theory of
-floating point (\qffp{}), build circuits for its operations, prove them correct
-against that theory, and extend \bvdecide{} to discharge floating-point goals
-through them. The result is the first \emph{verified} floating-point
-bitblaster---verified for every \qffp{} operation except round-to-integral,
-remainder, and the integer conversions, whose circuits we implement and test but
-do not yet prove.
+We bridge this gap by presenting the first verified floating-point bitblaster:
+a library and associated tactic in the Lean proof assistant that
+(a) mechanizes the SMT-LIB theory of floating point,
+(b) extends Lean's bitvector solver with floating-point bitblasting capabilities,
+(c) proves the correctness of the bitblasting reduction relative to the SMT-LIB theory, and
+(d) carefully builds the underlying circuits to support small floating-point formats.
+Our evaluation shows that verified bitblasting is practical:
+on the SMT-COMP benchmarks our solver runs within a \SmtLibGeomeanTimeElapsedRatioOB{} geomean slowdown of Bitwuzla,
+while offering far greater correctness guarantees than before.
 
-Building the circuits from the mechanized theory upward, rather than porting them
-wholesale, turns out to matter. It forces into the open the width assumptions
-that SymFPU's unpacker and rounder leave implicit---assumptions on which those
-circuits abort by assertion rather than silently miscompute---and discharging
-them explicitly is what lets our circuits cover the small floating-point formats,
-E4M3 and E5M2, that machine-learning quantization has made important
-(\cref{sec:fp:surfaced}).
-
-\section{Algorithmic Overview: How to Bitblast a Floating-Point Multiply}
+\section{How to Bitblast a Floating-Point Multiply}
 \label{sec:fp:overview}
 
 Consider proving that floating-point multiplication is commutative:

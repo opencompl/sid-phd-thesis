@@ -21,18 +21,25 @@ frontends, and generalized it to decide all predicates of the theory; I also
 implemented the mixed-Boolean-arithmetic solver. Léo Stefanesco contributed an
 alternative solver based on automatic structures.
 
-\lettrine{B}{itvectors} underpin automated reasoning about compilers, hardware,
-and cryptography, yet their \emph{widths} are as much a part of the problem as
-their values. Fixed-width solvers must know every width in advance, while a
-great many real-world goals, such as compiler rewrites,
-require us to prove an identity for \emph{all} widths at once.
-This chapter takes the first step toward deciding such \emph{parametric} bitvector goals: it decides
-predicates over a \emph{single} symbolic width, called the \emph{mono-width} fragment,
-$\text{PBV}_1$. It does so by casting them as model-checking problems and mechanizing the
-requisite automata and $k$-induction machinery. \Cref{ch:multi-width} then
-lifts this procedure from one symbolic width to many independent ones at once.
+\section{Overview}
+\label{sec:swbv:overview}
+% Two paragraphs, essentially no citations.
+% P1: the question this chapter answers, where it sits in the thesis argument,
+%     and the result in one plain sentence.
+% P2: the approximations made to the theoretically-justified algorithm, then
+%     the empirical payoff.
 
-Bitvectors are foundational for automated reasoning. A few
+% underpin automated reasoning about compilers, hardware,
+% and cryptography, yet their \emph{widths} are as much a part of the problem as
+% their values. Fixed-width solvers must know every width in advance, while a
+% great many real-world goals, such as compiler rewrites,
+% require us to prove an identity for \emph{all} widths at once.
+% This chapter takes the first step toward deciding such \emph{parametric} bitvector goals: it decides
+% predicates over a \emph{single} symbolic width, called the \emph{mono-width} fragment,
+% $\text{PBV}_1$. It does so by casting them as model-checking problems and mechanizing the
+% requisite automata and $k$-induction machinery.
+
+\lettrine{B}{itvectors} are foundational for automated reasoning. A few
 interactive theorem provers, such as Lean, have strong support for deciding
 \emph{fixed-width} bitvector predicates by means of bitblasting
 (\cref{sec:bg:bvdecide}). However, even these ITPs provide little automation

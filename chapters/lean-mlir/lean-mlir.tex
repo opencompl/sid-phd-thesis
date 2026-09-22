@@ -30,38 +30,31 @@ of fully homomorphic encryption, and Alex Keizer helped generalize the pure
 semantics to impure side effects.
 
 
+\section{Overview}
+\label{sec:mlir:overview}
+% Two paragraphs, essentially no citations.
+% P1: the question this chapter answers, where it sits in the thesis argument,
+%     and the result in one plain sentence.
+% P2: the approximations made to the theoretically-justified algorithm, then
+%     the empirical payoff.
+
 \lettrine{P}{eephole} rewriting is the workhorse of the modern compiler.
 LLVM's InstCombine alone accounts for roughly 10\% of the compiler's
 IR-transforming code, which is much more than its loop optimizer!
 Tools such as the Alive verifier~\citep{lopes2021alive2} made SMT-based validation of such rewrites
-part of the LLVM community's daily routine. How, then, should we formally verify a
-peephole rewriter? 
-CompCert-style end-to-end verification fixes the language up front, and so
-cannot keep pace with IRs that are still evolving.
-Alive-style translation validation is push-button, but it is bound to one fixed IR and trusts unverified SMT solvers.
-This chapter takes a third route, combining the convenience of Alive-style automation with
-machine-checked proof in an interactive theorem prover. I formalize a core
-calculus for SSA-based IRs that is generic over the IR and covers
-\emph{regions}, the nested scoping from which MLIR-style IRs are built, and
-mechanize it in Lean. The central result is a lifting theorem: a rewrite proved
-correct in isolation is correct wherever rewrite is applied inside a whole
-program.
+part of the LLVM community's daily routine.
+Along the lines of LLVM, the MLIR compiler framework has been gaining traction in the last few years,
+as it provides the core data structures and algorithms to build SSA-based compilers,
+build generalized over the choice of domain-specific IRs.
+However, these compilers and their IRs evolve at a rate that makes proof engineering alongside them prohibitively expensive.
+Here, we aim to build a framework to merge the convenience of automation with the versatility of ITPs for verifying peephole rewrites across domain-specific IRs.
+We formalize a core calculus for SSA-based IRs that is generic over the IR and covers so-called regions (nested scoping used by many domain-specific IRs in the MLIR ecosystem).
+Our mechanization in the Lean proof assistant provides a user-friendly frontend for translating MLIR syntax into our calculus.
+We provide scaffolding for defining and verifying peephole rewrites, offering tactics to eliminate the abstraction overhead of our SSA calculus.
+Overall, our framework allows users to define and verify peephole rewrites for MLIR-based compilers modularly,
+and provides integration with proof automation to strip away the overhead of the SSA encoding, leaving only the domain-specific reasoning to be done by the user.
+This feeds into the later chapters, where we develop decision procedures for \emph{verified} push-button proof automation.
 
-Around this theorem, I build a framework in which a user defines an IR and its rewrites,
-and receives a verified peephole rewriter in return.
-The encoding is intrinsically well-typed, so a rewritten program is well-typed by construction.
-Proof automation is built that strips the framework away, leaving the proof engineer
-a goal stated purely in the semantics of the IR.
-We demonstrate the framework with three case studies:
-LLVM's integer arithmetic, structured control flow, and an IR for
-fully homomorphic encryption whose values inhabit a quotient ring that is out
-of practical reach for today's SMT solvers. 
-Overall, once the framework overhead is stripped away,
-each of the 93 bitvector rewrites leaves behind a
-proof obligation over bitvectors of universally quantified width, and only 54
-of them close automatically. The structural half of verified peephole rewriting
-is discharged in this chapter.
-The automation gap is closed in the rest of the thesis.
 
 % \section{Motivation: Verifying Optimizations for High-Level IRs}
 % \label{sec:mlir:motivation}
