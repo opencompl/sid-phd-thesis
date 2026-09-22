@@ -2,25 +2,17 @@
 \label{ch:future-work}
 \epigraph{The achievement we celebrate today is but a step, an opening of opportunity, to the greater triumphs and achievements that await us.}{Jawaharlal Nehru, Tryst with Destiny}
 
-\lettrine{T}{his} thesis set out to show that peephole rewriting can be verified
-without taking either the compiler or the solver on trust.
-The first half builds a verified framework for peephole rewriting in SSA-based IRs (\cref{ch:lean-mlir}),
-which reduces whole-program semantic preservation to a single local rewrite obligation.
-The second half builds the decision procedures that discharge those obligations,
-and shows that such procedures can be mechanized and still be fast enough to be usable on real problems.
-Each of our solvers is implemented in Lean, and all of them are proof producing in some fashion.
+\lettrine{W}{e} set out to show that peephole rewriting can be verified without taking either the compiler or the solver on trust.
+Toward this, we built a framework to describe MLIR compiler IRs and their peephole rewrites in Lean,
+and we built verified decision procedures to automatically discharge proof obligations that arise in this process.
 %They are evaluated against the unverified state of the art, and none of them matches its raw speed.
 %Our floating-point bitblaster trails Bitwuzla by a geometric-mean factor of $\SmtlibRandSpeedupBitwuzlaOverOurs\times$,
 %and the fixed-width bitvector engine it is built on is itself within roughly an order of magnitude of Bitwuzla's.
 %What that price buys is an end-to-end correctness guarantee that reaches down to Lean's kernel.
-Together, our solvers are evidence that the finite-domain reasoning that underpins compilers,
-hardware, and cryptography can be carried out inside a proof assistant, at scale.
+Together, our solvers provide evidence that the finite-domain reasoning that underpins compilers,
+can be carried out inside a proof assistant, at scale.
 
-Were UNSAT certificates the right bet? I believe they were.
-Certificates let me spend the effort where it mattered, on the high-level algorithms and their
-correctness proofs, and pay for foundational trust in solver speed rather than in the size of the trusted base.
-
-Many open problems remain. Below I describe the three frontiers I find most exciting:
+Looking back, I can see many open problems that remain. I'll describe the three frontiers I find most exciting:
 nonlinear arithmetic over parametric bitvectors, a fully mechanized Bitwuzla, and tensor bitblasting.
 
 \section{Nonlinear Bitvector Arithmetic via the 2-adic Integers}
@@ -73,15 +65,18 @@ machinery is a natural starting point for a mechanization.
 
 \section{Tensor Bitblasting}
 
-Tensor bitblasting should be possible, because the three ingredients it needs now all exist.
-FpSan~\citep{openai2026fpsan} gives floating-point level equivalence, and guarantees equivalence upto an exponential ring,
-which is what ML practitioners care about. It can be implemented as a bitvector solver, and I have a prototypical implementation of it in Lean.
-TensorRight~\citep{arora2025tensorright} is an algorithm for shape level equivalence,
-by computing a safety cutoff on the number of dimensions that must be checked, and then checking upto that cutoff.
-This is a bounded-to-unbounded transfer principle, with a very similar flavour to that ouf our automata-based solvers.
-Linear layouts~\citep{zhou2026linear} encode layouts efficiently in terms of bitpatterns,
-under the assumption that the layouts are all going to be powers of 2. This provides convient encodings of tensor shapes,
-and makes them amenable to bitblasting. The three ingredients are therefore in place, and the only missing piece is a way to combine them.
+Tensor bitblasting should be possible, and I'm going to sketch out the algorithms that I believe can be used to implement this.
+The overall idea is to reduce the problem to thinking of tensor operations as a composition of``reshaping'' operations,
+and ``elementwise'' operations, which together can be combined to decide the theory of tensors.
+Firstly, for elementwise operations, FpSan~\citep{openai2026fpsan} gives floating-point level equivalence, and guarantees equivalence upto an exponential ring,
+which is what ML practitioners care about anyway. It can be implemented as a bitvector solver, and I have a prototypical implementation of it in Lean.
+Seondly, TensorRight~\citep{arora2025tensorright} is an algorithm for shape level equivalence.
+The key idea is similar to that of our parametric bitvector solver,
+that shows that for every shape-based equivalence, one can compute a finite upper bound on the dimensions of the tensors that must be checked, and then checking upto that cutoff.
+This does not immediately give a SAT-friendly encoding.
+To achieve this, we propose using (3) Linear layouts~\citep{zhou2026linear}, which showed how by making the mild assumption that all tensor sizes are powers of 2,
+basically all tensor based shape operations can be encoded efficiently as linear algebra over $Z/2Z$. This of course provides extremely convenient bitvector encodings.
+The three ingredients are in place, and the missing piece is to combine them correctly, and filling the holes in each theory with support from the others.
 
 I expect the masking trick of our multi-width solver (\cref{ch:multi-width})
 can be adapted to tensor shapes, since a symbolic dimension plays much the same role as a symbolic width,
@@ -92,7 +87,7 @@ and is trustworthy, because it can be implemented via bitblasting in a proof ass
 
 \section*{Closing}
 
-Looking back, it's worth asking why bitblasting works in practice.
+Looking back, for me, it was worth wondering why bitblasting works in practice.
 I read it as a flavour of the bitter lesson~\citep{sutton2019bitter},
 the observation from AI that search and learning are the only two paradigms that keep rewarding the compute we feed them.
 Automated reasoning has its own incarnation of search in SAT solving,
@@ -103,14 +98,14 @@ which is exactly what foundational trust demands.
 
 It is also worth wondering whether the effort of implementing these procedures in Lean~\citep{demoura2021lean}
 and proving them correct is worth it. I believe it is, and that formal verification will only grow in importance.
-These are interesting times (as of August 2026): large language models~\citep{brown2020language,touvron2023llama}
+These are interesting times (as of September 2026): large language models~\citep{brown2020language,touvron2023llama}
 produce impressive volumes of code, but cannot be trusted to get the details right.
 A machine-checked specification, with machine-checked automation to discharge it is the clear path forward.
 
-A large body of an optimizing compiler rests on peephole rewriting,
+Overall, a large body of an optimizing compiler rests on peephole rewriting,
 and the correctness of each rewrite is a small but crucial piece of the overall correctness argument.
 The procedures that prove these rewrites en masse need not be taken on trust.
 They can be implemented, proved correct, and run inside a proof assistant,
 on the problems practitioners actually have.
-Overall, foundational proof and push-button automation need not be at odds,
-and the price of foundational trust is not too steep to pay.
+Foundational proof and push-button automation need not be at odds,
+and the price of foundational trust need not be too steep to pay.
