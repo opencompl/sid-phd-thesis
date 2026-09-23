@@ -224,8 +224,7 @@ bitvector width variables.
 %
 If we restrict width expressions to have no width variables ($\text{PBV}_0$), we
 recover the standard theory of fixed-width bitvectors (\qfbv{}). If we allow
-only one width variable, we recover the mono-width parametric bitvector
-theory of prior work ($\text{PBV}_1$) \cite{bhat2025certified}.
+only one width variable, we recover the mono-width parametric bitvector formula from the previous chapter.
 %
 Thus, this unifies the presentation of all three theories, and allows us to
 state our reductions: an equisatisfiable translation from $\text{PBV}_n$ to
@@ -713,175 +712,175 @@ infrastructure~\citep{bhat2025certified}.
 We also conjecture that giving custom encodings of zero and sign extension yields
 smaller automata, which are easier to model check.
 
-\subsection{Background: The Automata Theoretic Approach to Mono-Width PBV}
-
-We describe a recent decision procedure~\citep{bhat2025certified} for the
-mono-width linear-fragment of PBV (i.e., without the three size-changing
-operations listed above).
-
-\begin{wrapfigure}[5]{r}{0.4\textwidth}
-{
-% \footnotesize
-\vspace{-2em}
-\setlength{\tabcolsep}{4pt}
-\begin{tabular}{r|cccccc}
-  \rowcolor{black!10!white}
-          & $\dots$ & $b_4$ & $b_3$ & $b_2$ & $b_1$ & $b_0$ \\
-  $x$           & $\dots$ & 0 & 0 & 0 & 1 & 1 \\
-  \rowcolor{black!10!white}
-  $y$           & $\dots$ & 0 & 0 & 0 & 0 & 1 \\
-  \rowcolor{black!5!white}
-  $x \bitand y$ & $\dots$ & 0 & 0 & 0 & 0 & 1 \\
-  \rowcolor{black!10!white}
-  $y \bitand x$ & $\dots$ & 0 & 0 & 0 & 0 & 1 \\
-\end{tabular}
-}
-\end{wrapfigure}
-
-For an arbitrary width $w$, suppose we have the bitvector predicate $P_w \defn
-\forall (x~y: \BV{w}), x \bitand y = y \bitand x$.
-Our objective is to prove that the predicate $P_\ast \defn \forall w, P_w$ holds.
-The first reduction step is to see that we can instead prove the equivalent predicate
-$\Phi \defn \forall (x~y : \Bitstream), x \bitand y = y \bitand x$, which is
-over infinite bitstreams, and where bitwise operations are defined in the
-expected way.
-%
-This first reduction converts an equality over parametric bitvectors into an equality over bitstreams.
-%
-We imagine these bitstreams as infinite sequences of bits indexed from $0$ to $\infty$,
-laid out on a strip. For a particular instantiation, suppose $x = 3\#5 = \langle 00011\rangle$
-(i.e. bitvector of value $3$, bitwidth $5$) and $y = 1\#5 = \langle 00001\rangle$.
-These become infinite bitstreams by extending them with an infinite sequence of $0$s.
-%
-Next, to decide $\Phi$, we need to be able to have a finite representation for
-the bitstreams $x \bitand y$ and $y \bitand x$.
-%
-We compute these bitstreams via finite state transducers, on which many
-properties are decidable.
-%
-For illustration, we depict the bitstreams for $x \bitand y$ and $y \bitand x$
-on the right.
-
-Now, for the predicate $x \bitand y = y \bitand x$, we consider equality itself as a bitstream.
-Here, the equality predicate is a stream of $T$ and $F$ values, where $T$ indicates that
-the two input bitstreams are equal up to that position,
-and $F$ indicates that the two input bitstreams have differed at some position.
-For our running example, since the expression is true, the equality bitstream is all $T$s.
-Now, the question of whether $\Phi$ holds reduces to whether the bitstream for $(x \bitand y) = (y \bitand x)$ is always $T$.
-
-\begin{figure}[tbp]
-%\begin{minipage}[t]{0.3\textwidth}
-\begin{tabular}{lll}
-  \begin{tikzpicture}[mwbvautomaton, font=\footnotesize,node distance=2cm, on grid, auto, background rectangle/.style={fill=black!10!white}, show background rectangle, rounded corners=0.3cm]
-
-    % Left automaton: (x, y) -> x
-      \node[state, initial, accepting] (x0) {$x_0$};
-      \path[->]
-        (x0) edge [loop above] node {$[0,0]/0, [0,1]/0$} ()
-             edge [loop below] node {$[1,0]/1, [1,1]/1$} ();
-      \node[above=1.9cm of x0, font=\small] {$(x, y) \mapsto x$};
-\end{tikzpicture}
-&
-  \begin{tikzpicture}[mwbvautomaton, font=\footnotesize,node distance=2cm, on grid, auto, background rectangle/.style={fill=black!10!white}, show background rectangle, rounded corners=0.3cm]
-      \node[state, initial, accepting] (y0) {$y_0$};
-      \path[->]
-        (y0) edge [loop above] node {$[0,0]/0, [1,0]/0$} ()
-             edge [loop below] node {$[0,1]/1, [1,1]/1$} ();
-      \node[above=1.9cm of y0, font=\small] {$(x, y) \mapsto y$};
-\end{tikzpicture}
-&
-%\end{minipage}
-%\begin{minipage}[t]{0.3\textwidth}
-  \begin{tikzpicture}[mwbvautomaton, font=\footnotesize,node distance=2cm, on grid, auto, background rectangle/.style={fill=black!10!white}, show background rectangle, rounded corners=0.3cm]
-    % \backgroundrectangle[fill=red!10!white]{} % optional extra settings
-    \node[state, initial, accepting] (x0) {$x_0$};
-    \path[->]
-        (x0) edge [loop above] node {$[0,0]/0, [0,1]/0, [1, 0]/0$} ()
-             edge [loop below] node {$[1,1]/1$} ();
-    \node[above=1.9cm of x0, font=\small] {$(p, q) \mapsto p \bitand q$};
-\end{tikzpicture}
-\end{tabular}
-\caption{Automata for $x$, $y$, and $x \bitand y$, operations with no state needed.}
-\end{figure}
-
-
-\paragraph{Finite State Transducers for Mono-Width Parametric Bitvectors}
-
-The next step is to decide $\Phi$.
-For this, we model the input bitstreams $x$ and $y$, as well as all intermediate expressions
-(e.g., $x \bitand y$) as the output of finite state transducers.
-These transducers receive a tuple of bits with one tuple element for each variable, at each timestep,
-and produce the bitstream corresponding to the expression's value at that timestep.
-As an example, the expression $x$ receives a tuple of bits as input $[x_i, y_i]$, and produces output $x_i$.
-Similarly, the automaton for the subexpression $y$ receives a tuple of bits $[x_i, y_i]$ as input and produces $y_i$ as output.
-
-For the subexpressions $x \bitand y$ and $y \bitand x$,
-we first see that there is a finite state transducer that computes $(p, q)\mapsto p \bitand q$.
-We obtain the automata for $x \bitand y$ as well as $y \bitand x$ by composing the automata for $x$, $y$ and the $\bitand$ transducer.
-While in this case, the automata appear identical, in general, they will differ based on the input expressions.
-We can construct an automaton for the predicate $\Phi$ by composing the automata for $x \bitand y$ and $y \bitand x$.
+%% \subsection{Background: The Automata Theoretic Approach to Mono-Width PBV}
+%% 
+%% We describe a recent decision procedure~\citep{bhat2025certified} for the
+%% mono-width linear-fragment of PBV (i.e., without the three size-changing
+%% operations listed above).
+%% 
+%% \begin{wrapfigure}[5]{r}{0.4\textwidth}
+%% {
+%% % \footnotesize
+%% \vspace{-2em}
+%% \setlength{\tabcolsep}{4pt}
+%% \begin{tabular}{r|cccccc}
+%%   \rowcolor{black!10!white}
+%%           & $\dots$ & $b_4$ & $b_3$ & $b_2$ & $b_1$ & $b_0$ \\
+%%   $x$           & $\dots$ & 0 & 0 & 0 & 1 & 1 \\
+%%   \rowcolor{black!10!white}
+%%   $y$           & $\dots$ & 0 & 0 & 0 & 0 & 1 \\
+%%   \rowcolor{black!5!white}
+%%   $x \bitand y$ & $\dots$ & 0 & 0 & 0 & 0 & 1 \\
+%%   \rowcolor{black!10!white}
+%%   $y \bitand x$ & $\dots$ & 0 & 0 & 0 & 0 & 1 \\
+%% \end{tabular}
+%% }
+%% \end{wrapfigure}
+%% 
+%% For an arbitrary width $w$, suppose we have the bitvector predicate $P_w \defn
+%% \forall (x~y: \BV{w}), x \bitand y = y \bitand x$.
+%% Our objective is to prove that the predicate $P_\ast \defn \forall w, P_w$ holds.
+%% The first reduction step is to see that we can instead prove the equivalent predicate
+%% $\Phi \defn \forall (x~y : \Bitstream), x \bitand y = y \bitand x$, which is
+%% over infinite bitstreams, and where bitwise operations are defined in the
+%% expected way.
+%% %
+%% This first reduction converts an equality over parametric bitvectors into an equality over bitstreams.
+%% %
+%% We imagine these bitstreams as infinite sequences of bits indexed from $0$ to $\infty$,
+%% laid out on a strip. For a particular instantiation, suppose $x = 3\#5 = \langle 00011\rangle$
+%% (i.e. bitvector of value $3$, bitwidth $5$) and $y = 1\#5 = \langle 00001\rangle$.
+%% These become infinite bitstreams by extending them with an infinite sequence of $0$s.
+%% %
+%% Next, to decide $\Phi$, we need to be able to have a finite representation for
+%% the bitstreams $x \bitand y$ and $y \bitand x$.
+%% %
+%% We compute these bitstreams via finite state transducers, on which many
+%% properties are decidable.
+%% %
+%% For illustration, we depict the bitstreams for $x \bitand y$ and $y \bitand x$
+%% on the right.
+%% 
+%% Now, for the predicate $x \bitand y = y \bitand x$, we consider equality itself as a bitstream.
+%% Here, the equality predicate is a stream of $T$ and $F$ values, where $T$ indicates that
+%% the two input bitstreams are equal up to that position,
+%% and $F$ indicates that the two input bitstreams have differed at some position.
+%% For our running example, since the expression is true, the equality bitstream is all $T$s.
+%% Now, the question of whether $\Phi$ holds reduces to whether the bitstream for $(x \bitand y) = (y \bitand x)$ is always $T$.
+%% 
+%% \begin{figure}[tbp]
+%% %\begin{minipage}[t]{0.3\textwidth}
+%% \begin{tabular}{lll}
+%%   \begin{tikzpicture}[mwbvautomaton, font=\footnotesize,node distance=2cm, on grid, auto, background rectangle/.style={fill=black!10!white}, show background rectangle, rounded corners=0.3cm]
+%% 
+%%     % Left automaton: (x, y) -> x
+%%       \node[state, initial, accepting] (x0) {$x_0$};
+%%       \path[->]
+%%         (x0) edge [loop above] node {$[0,0]/0, [0,1]/0$} ()
+%%              edge [loop below] node {$[1,0]/1, [1,1]/1$} ();
+%%       \node[above=1.9cm of x0, font=\small] {$(x, y) \mapsto x$};
+%% \end{tikzpicture}
+%% &
+%%   \begin{tikzpicture}[mwbvautomaton, font=\footnotesize,node distance=2cm, on grid, auto, background rectangle/.style={fill=black!10!white}, show background rectangle, rounded corners=0.3cm]
+%%       \node[state, initial, accepting] (y0) {$y_0$};
+%%       \path[->]
+%%         (y0) edge [loop above] node {$[0,0]/0, [1,0]/0$} ()
+%%              edge [loop below] node {$[0,1]/1, [1,1]/1$} ();
+%%       \node[above=1.9cm of y0, font=\small] {$(x, y) \mapsto y$};
+%% \end{tikzpicture}
+%% &
+%% %\end{minipage}
+%% %\begin{minipage}[t]{0.3\textwidth}
+%%   \begin{tikzpicture}[mwbvautomaton, font=\footnotesize,node distance=2cm, on grid, auto, background rectangle/.style={fill=black!10!white}, show background rectangle, rounded corners=0.3cm]
+%%     % \backgroundrectangle[fill=red!10!white]{} % optional extra settings
+%%     \node[state, initial, accepting] (x0) {$x_0$};
+%%     \path[->]
+%%         (x0) edge [loop above] node {$[0,0]/0, [0,1]/0, [1, 0]/0$} ()
+%%              edge [loop below] node {$[1,1]/1$} ();
+%%     \node[above=1.9cm of x0, font=\small] {$(p, q) \mapsto p \bitand q$};
+%% \end{tikzpicture}
+%% \end{tabular}
+%% \caption{Automata for $x$, $y$, and $x \bitand y$, operations with no state needed.}
+%% \end{figure}
 
 
+% \paragraph{Finite State Transducers for Mono-Width Parametric Bitvectors}
+% 
+% The next step is to decide $\Phi$.
+% For this, we model the input bitstreams $x$ and $y$, as well as all intermediate expressions
+% (e.g., $x \bitand y$) as the output of finite state transducers.
+% These transducers receive a tuple of bits with one tuple element for each variable, at each timestep,
+% and produce the bitstream corresponding to the expression's value at that timestep.
+% As an example, the expression $x$ receives a tuple of bits as input $[x_i, y_i]$, and produces output $x_i$.
+% Similarly, the automaton for the subexpression $y$ receives a tuple of bits $[x_i, y_i]$ as input and produces $y_i$ as output.
+% 
+% For the subexpressions $x \bitand y$ and $y \bitand x$,
+% we first see that there is a finite state transducer that computes $(p, q)\mapsto p \bitand q$.
+% We obtain the automata for $x \bitand y$ as well as $y \bitand x$ by composing the automata for $x$, $y$ and the $\bitand$ transducer.
+% While in this case, the automata appear identical, in general, they will differ based on the input expressions.
+% We can construct an automaton for the predicate $\Phi$ by composing the automata for $x \bitand y$ and $y \bitand x$.
+% 
+% 
+% 
+% \begin{figure}[tbp]
+% \begin{tabular}{ll}
+% \begin{tikzpicture}[mwbvautomaton, font=\footnotesize, shorten >=1pt, node distance=2cm, on grid, auto, background rectangle/.style={fill=black!10!white}, show background rectangle, rounded corners=0.3cm]
+%     % \backgroundrectangle[fill=blue!10!white]{} % optional extra settings
+%    % States
+%    \node[state, initial] (eq) {=};
+%    \node[state, right=of eq] (neq) {≠};
+% 
+%    % Loops
+%    \path[->]
+%      (eq) edge[loop above] node {[1,1]/T} ()
+%           edge[loop below] node {[0,0]/T} ()
+%      (neq) edge[loop above] node {[$\star$, $\star$]/F} ();
+% 
+%    % Transitions
+%    \path[->]
+%      (eq) edge[bend left] node {[0,1]/F} (neq)
+%           edge[bend right] node[below] {[1,0]/F} (neq);
+%     \node[above=1.9cm of eq, font=\small] {$(p, q) \mapsto p = q$};
+% \end{tikzpicture} &
+% \begin{tikzpicture}[mwbvautomaton, font=\footnotesize, shorten >=1pt, node distance=2cm, on grid, auto, background rectangle/.style={fill=black!10!white}, show background rectangle, rounded corners=0.3cm]
+%    % States
+%    \node[state, initial, accepting] (eq) {=};
+%    \node[state, right=of eq] (neq) {$\neq$};
+% 
+%    % Loops on = state
+%    \path[->]
+%     (eq) edge[loop above] node{$[0, 0]/T, [0, 1]/T$} ()
+%          edge[loop below] node{$x:[1, 0]/T, [1, 1]/T$} ();
+% 
+%    % Loop on != state
+%    \path[->]
+%     (neq) edge[loop above] node{$[\star, \star] / F$} ();
+% 
+%    % Transition from = to !=
+%    \path[->]
+%     (eq) edge[bend left, above] node{} (neq);
+%     \node[above=1.9cm of eq, font=\small] {$(x, y) \mapsto (x \bitand y) = (y \bitand x)$};
+% \end{tikzpicture}
+% \end{tabular}
+% \caption{Automata for equality and the final predicate $\Phi$.}
+% \end{figure}
+% 
+% 
+% So far, all the automata we have constructed have been memoryless. The next automaton that we construct for $(p, q) \mapsto p = q$
+% is more interesting, since it uses state to keep track of whether the two input bitstreams have differed at any prior timestep.
+% The idea is that this automaton starts in the $(=)$ state, and remains in this state as long as the two input bitstreams are equal.
+% If, at any timestep, the two input bitstreams differ, the automaton transitions to the $(\neq)$ state,
+% and remains in this state forever. This matches our intuition of equality:
+% two bitstreams that are disequal at any position must remain disequal forevermore.
+% %
+% Finally, we compose the automata for $x \bitand y$ and $y \bitand x$ with the automaton for equality,
+% giving us the final automaton for the predicate $\Phi$. See that in the final automaton,
+% the $F$ state is unreachable, so $\Phi$ holds.
+% 
+% \subsection{Extending to Multiple Widths: New Automata}
 
-\begin{figure}[tbp]
-\begin{tabular}{ll}
-\begin{tikzpicture}[mwbvautomaton, font=\footnotesize, shorten >=1pt, node distance=2cm, on grid, auto, background rectangle/.style={fill=black!10!white}, show background rectangle, rounded corners=0.3cm]
-    % \backgroundrectangle[fill=blue!10!white]{} % optional extra settings
-   % States
-   \node[state, initial] (eq) {=};
-   \node[state, right=of eq] (neq) {≠};
-
-   % Loops
-   \path[->]
-     (eq) edge[loop above] node {[1,1]/T} ()
-          edge[loop below] node {[0,0]/T} ()
-     (neq) edge[loop above] node {[$\star$, $\star$]/F} ();
-
-   % Transitions
-   \path[->]
-     (eq) edge[bend left] node {[0,1]/F} (neq)
-          edge[bend right] node[below] {[1,0]/F} (neq);
-    \node[above=1.9cm of eq, font=\small] {$(p, q) \mapsto p = q$};
-\end{tikzpicture} &
-\begin{tikzpicture}[mwbvautomaton, font=\footnotesize, shorten >=1pt, node distance=2cm, on grid, auto, background rectangle/.style={fill=black!10!white}, show background rectangle, rounded corners=0.3cm]
-   % States
-   \node[state, initial, accepting] (eq) {=};
-   \node[state, right=of eq] (neq) {$\neq$};
-
-   % Loops on = state
-   \path[->]
-    (eq) edge[loop above] node{$[0, 0]/T, [0, 1]/T$} ()
-         edge[loop below] node{$x:[1, 0]/T, [1, 1]/T$} ();
-
-   % Loop on != state
-   \path[->]
-    (neq) edge[loop above] node{$[\star, \star] / F$} ();
-
-   % Transition from = to !=
-   \path[->]
-    (eq) edge[bend left, above] node{} (neq);
-    \node[above=1.9cm of eq, font=\small] {$(x, y) \mapsto (x \bitand y) = (y \bitand x)$};
-\end{tikzpicture}
-\end{tabular}
-\caption{Automata for equality and the final predicate $\Phi$.}
-\end{figure}
-
-
-So far, all the automata we have constructed have been memoryless. The next automaton that we construct for $(p, q) \mapsto p = q$
-is more interesting, since it uses state to keep track of whether the two input bitstreams have differed at any prior timestep.
-The idea is that this automaton starts in the $(=)$ state, and remains in this state as long as the two input bitstreams are equal.
-If, at any timestep, the two input bitstreams differ, the automaton transitions to the $(\neq)$ state,
-and remains in this state forever. This matches our intuition of equality:
-two bitstreams that are disequal at any position must remain disequal forevermore.
-%
-Finally, we compose the automata for $x \bitand y$ and $y \bitand x$ with the automaton for equality,
-giving us the final automaton for the predicate $\Phi$. See that in the final automaton,
-the $F$ state is unreachable, so $\Phi$ holds.
-
-\subsection{Extending to Multiple Widths: New Automata}
-
-After the masking translation (\cref{mwbv:sec:mask-substitution}), width variables
-become mask bitstreams in the automata encoding.
+Recall that ater the masking translation for a given input formula, (\cref{mwbv:sec:mask-substitution}), all width variables
+become mask bitstreams.
 The mono-width automata handle arithmetic, bitwise operations, and masking,
 but we still need automata for the operations unique to the multi-width setting.
 We illustrate the construction with zero extension.
@@ -956,7 +955,7 @@ This can be computed by using both the original mask $m_w$, and the mask shifted
 to mask away just the top bit. Then, we check whether this masked bitvector is nonzero to determine the msb.
 Formally, $\msb(x)$ can be computed as $(x \bitand m_w \bitand \bitnot  m_{w-1} \neq 0)$.
 Sign extension can be computed in terms of msb and other automata-expressible operations.
-As explained, these extend prior work by also requiring width masks to be available as bitstreams,
+As explained, these extend the prior chapter by also requiring width masks to be available as bitstreams,
 which allows one to encode zero and sign extension into the linear-bitwise fragment, which is automata decidable.
 
 \begin{figure}[tbp]
@@ -1025,18 +1024,15 @@ Extensions are \newstuff{highlighted}.}
 
 The key to decidability is to encode the bitstreams as outputs of finite state transducers.
 Encoding widths as mask bitstreams allows us to perform width-based bit-masking on the bitvector operations,
-thereby extending the mono-width encodings of prior work~\cite{bhat2025certified} to the multi-width setting.
-Our extensions to the original calculus are shown in \cref{mwbv:fig:encodings}, with extensions \newstuff{highlighted}.
-If one sets all the width variables to be equal to the all-ones bitstream,
-then one perfectly recovers the mono-width encodings of prior work.
+% thereby extending the mono-width encodings of prior work~\cite{bhat2025certified} to the multi-width setting.
+Our extensions to the original calculus from the previous chapter are shown in \cref{mwbv:fig:encodings}, with extensions \newstuff{highlighted}.
 
 Given a finite state transducer $f$ which encodes the denotation of a bitvector predicate $\phi$,
 we can decide the truth value of $\phi$ by ensuring that all reachable states of $f$ produce an output of $1$.
 We use a mechanized $k$-induction solver to check this property of $f$.
 As $k$-induction is sound and our encodings are sound, our overall decision procedure is sound.
-Furthermore, we use the $k$-induction solver from prior work, which has cycle breaking, and thereby ensures completeness.
-We also have an implementation of a solver based on IC3,
-which is not proof producing, but is much more efficient on certain problem structures.
+We reuse the $k$-induction solver developed in the previous chapter.
+We also have an implementation of a solver based on IC3, which is not proof producing, but is much more efficient on certain problem structures.
 
 
 \subsection{Soundness \& Completeness of Automata Encoding}
@@ -1050,10 +1046,10 @@ The decision procedure is sound and complete:
 \end{theorem}
 %
 \noindent
-This result is mechanized using the Lean proof assistant. The idea of the proof
-is similar to that of \citet{bhat2025certified}. We reuse the library for expressing finite state machines,
-and the $k$-induction solver with proof certificates from prior work.
-We build the new syntax encodings, translations to automata, and soundness and completeness proofs for the translation on top of prior work.
+This result is mechanized using Lean. The idea of the proof
+is similar to that of the previous chapter. We reuse the library we have built for expressing finite state machines,
+and the $k$-induction solver with proof certificates.
+We build the new syntax encodings, translations to automata, and soundness and completeness proofs for the translation.
 The proof takes the new width constraints into account: we relate expressions with their associated
 transducers, by stating that for a given environment, a bitvector term~$a$
 produces the bitstream (by completing it with zeros) as its associated
@@ -1527,75 +1523,90 @@ Our automata-based unbounded solvers prove strictly more problems than CVC5-berg
 demonstrating that they scale to real-world compiler and hardware verification benchmarks.
 
 
-
-\section{Related Work: Parametric and Fixed-Width Bitvector Solving}
+\section{Discussion}
+\sid{TODO: move the related work to a different place}.
 \label{sec:multi:related}
 
-The introduction (\cref{ch:intro}) placed this thesis among the approaches that bridge
-automated speed and kernel-checked trust; here we compare against the technical
-antecedents specific to parametric bitvector solving.
+The approach outlined in this chapter seems nice in theory, and to be effective in practice.
+Psychologically, the completeness for the linear-bitwise fragment is quite nice.
+In practice, the bounded model checker, which is an effective solver for all of parametric bitvectors,
+has seen more demand amongst other researchers I have discussed these algorithms with.
+This makes sense, since in practice, for production, a bounded sound and complete guarantee over a richer language appears to be more valued.
 
-The automata-theoretic and model-checking machinery on which our multi-width
-solver rests---bitwidth-independent circuits, automata encodings of Presburger
-arithmetic, and mechanized model checking---is surveyed in the related work of
-\cref{ch:mono-width}. Here we discuss the work most specific to the multi-width
-setting: fixed-width backends, prior parametric-bitvector solvers, and bounded
-model checking.
+An interesting extension to this setting would be to prove bitvector appends as automata-(un)-decidable.
+However, it seems implausible to me to be decidable, since, if one can encode bitvector appends, then one can encode the theory of binary strings.
+If one can encode binary strings, then one can encode the theory of strings over a finite alphabet.
+However, the theory of strings is poorly understood, and the best algorithms we have for deciding this are in PSPACE.
+which ``feels'' like a much larger complexity class that ought to be symbolic-automata-representable.
+This argument does not directly rule out the automata-based approach, since the $k$-induction solver is atempting to solve an EXPTIME problem,
+which is somewhat comparable to PSPACE.
 
-\paragraph{Fixed Width Bitvector Solving.}
-A wide range of techniques have been contemplated for fixed-width bitvector solving,
-using approaches such as bitblasting, word-level reasoning, and combinations thereof.
-Bitwuzla \cite{niemetz2023bitwuzla} is a state-of-the-art SMT solver for fixed-width bitvectors, that uses bitblasting
-along with word-level rewriting and preprocessing. Bitwuzla is a successor to Boolector\cite{brummayer2009boolector}.
-
-\paragraph{Parametric Bitvector Solving.}
-Recent work has shown renewed interest in parametric bitvector solving,
-due to applications in compiler verification and hardware optimization.
-Algorithms for parametric bitvector solving based on rewriting and reductions to nonlinear integer arithmetic \cite{bit-precise-parametric-bv} have been recently proposed
-as a practically effective solution.
-The sound and complete automata-based procedures of \cref{ch:mono-width}
-decide fragments of the PBV language in the mono-width setting ($\text{PBV}_1$), via reductions
-to automata-based decision procedures for linear integer arithmetic---an approach
-rooted in the classical result that integer arithmetic can be encoded by finite
-automata~\citep{Büchi1960}. The multi-width solver above builds on that
-automata-based approach, extending it to handle the full PBV language via our
-reduction, and improving its performance on the linear fragment via verified
-automata construction and $k$-induction.
-
-\paragraph{Bounded Model Checking.}
-Bounded model checking (BMC) arose as a technique to prevent the exponential blowup of BDDs
-by using a SAT solver to search for counterexamples upto a given bound~\cite{biere2009bounded}.
-Our algorithm uses ideas from BMC, where we bound the mono-width parameter after our reduction, and encode the entire problem as a single \qfbv{} query.
+In conclusion, we have developed effective and practical algorithms for parametric bitvector solving,
+and we've mechanized these in Lean. In the next chapter, we develop a mechanized solver for floating point values.
+This reuses the bitblasting infrastructure, but sets it up for much more intricate reasoning.
+% These two chapters complete the \emph{width} axis of the thesis, but the values
+% themselves have so far remained plain machine integers. The next chapter turns
+% from richer \emph{widths} to richer \emph{values}: it reuses the same verified
+% bitblasting infrastructure to decide predicates over \emph{floating-point}
+% numbers, whose bit-level encodings---sign, exponent, and mantissa---make them by
+% far the most intricate values that compilers routinely reason about
 
 
-\section{Limitations}
-\label{sec:multi:limitations}
 
-Two limitations bound these results, and both point beyond this chapter. The
-first is one of theory: our solvers are sound and complete for the
-\emph{linear-bitwise} fragment of the parametric theory, but nonlinear
-operations---multiplication of two symbolic-width unknowns, and the like---fall
-outside it. This is not a gap we can close by more engineering; deciding the
-nonlinear fragment requires a genuinely different tool, and we have an
-unpublished reduction to the first-order theory of the $2$-adic integers.
-The second concerns evaluation. We deliberately avoid
-preprocessing such as associativity--commutativity normalization, so as to
-measure the solving technique itself rather than a normal form that might make
-problems trivial; a production tactic would want such preprocessing, and its
-absence makes our numbers conservative. Our multi-width benchmarks are, in part,
-translated from LLVM InstCombine into parametric SMT-LIB by an agentic harness
-after we hand-generalize a representative seed set, with every generated formula
-checked against a naive enumerative solver to bound $8$ before it enters the
-dataset; this guards against mistranslation, though it does not replace a full
-correctness argument for the generalization. The mono-width results of
-\cref{ch:mono-width}, by contrast, are packaged as an artifact that has been
-independently reproduced through published artifact evaluation.
+% \paragraph{Fixed Width Bitvector Solving.}
+% A wide range of techniques have been contemplated for fixed-width bitvector solving,
+% using approaches such as bitblasting, word-level reasoning, and combinations thereof.
+% Bitwuzla \cite{niemetz2023bitwuzla} is a state-of-the-art SMT solver for fixed-width bitvectors, that uses bitblasting
+% along with word-level rewriting and preprocessing. Bitwuzla is a successor to Boolector\cite{brummayer2009boolector}.
 
-\paragraph{From Richer Widths to Richer Values.}
-These two chapters complete the \emph{width} axis of the thesis, but the values
-themselves have so far remained plain machine integers. The next chapter turns
-from richer \emph{widths} to richer \emph{values}: it reuses the same verified
-bitblasting infrastructure to decide predicates over \emph{floating-point}
-numbers, whose bit-level encodings---sign, exponent, and mantissa---make them by
-far the most intricate values that compilers routinely reason about
-(\cref{ch:floating-point}).
+% \paragraph{Parametric Bitvector Solving.}
+% Recent work has shown renewed interest in parametric bitvector solving,
+% due to applications in compiler verification and hardware optimization.
+% Algorithms for parametric bitvector solving based on rewriting and reductions to nonlinear integer arithmetic \cite{bit-precise-parametric-bv} have been recently proposed
+% as a practically effective solution.
+% The sound and complete automata-based procedures of \cref{ch:mono-width}
+% decide fragments of the PBV language in the mono-width setting ($\text{PBV}_1$), via reductions
+% to automata-based decision procedures for linear integer arithmetic---an approach
+% rooted in the classical result that integer arithmetic can be encoded by finite
+% automata~\citep{Büchi1960}. The multi-width solver above builds on that
+% automata-based approach, extending it to handle the full PBV language via our
+% reduction, and improving its performance on the linear fragment via verified
+% automata construction and $k$-induction.
+% 
+% \paragraph{Bounded Model Checking.}
+% Bounded model checking (BMC) arose as a technique to prevent the exponential blowup of BDDs
+% by using a SAT solver to search for counterexamples upto a given bound~\cite{biere2009bounded}.
+% Our algorithm uses ideas from BMC, where we bound the mono-width parameter after our reduction, and encode the entire problem as a single \qfbv{} query.
+
+
+% \section{Limitations}
+% \label{sec:multi:limitations}
+% 
+% Two limitations bound these results, and both point beyond this chapter. The
+% first is one of theory: our solvers are sound and complete for the
+% \emph{linear-bitwise} fragment of the parametric theory, but nonlinear
+% operations---multiplication of two symbolic-width unknowns, and the like---fall
+% outside it. This is not a gap we can close by more engineering; deciding the
+% nonlinear fragment requires a genuinely different tool, and we have an
+% unpublished reduction to the first-order theory of the $2$-adic integers.
+% The second concerns evaluation. We deliberately avoid
+% preprocessing such as associativity--commutativity normalization, so as to
+% measure the solving technique itself rather than a normal form that might make
+% problems trivial; a production tactic would want such preprocessing, and its
+% absence makes our numbers conservative. Our multi-width benchmarks are, in part,
+% translated from LLVM InstCombine into parametric SMT-LIB by an agentic harness
+% after we hand-generalize a representative seed set, with every generated formula
+% checked against a naive enumerative solver to bound $8$ before it enters the
+% dataset; this guards against mistranslation, though it does not replace a full
+% correctness argument for the generalization. The mono-width results of
+% \cref{ch:mono-width}, by contrast, are packaged as an artifact that has been
+% independently reproduced through published artifact evaluation.
+
+% \paragraph{From Richer Widths to Richer Values.}
+% These two chapters complete the \emph{width} axis of the thesis, but the values
+% themselves have so far remained plain machine integers. The next chapter turns
+% from richer \emph{widths} to richer \emph{values}: it reuses the same verified
+% bitblasting infrastructure to decide predicates over \emph{floating-point}
+% numbers, whose bit-level encodings---sign, exponent, and mantissa---make them by
+% far the most intricate values that compilers routinely reason about
+% (\cref{ch:floating-point}).
