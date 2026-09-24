@@ -172,7 +172,7 @@ This section walks through the algorithmic structure of that multiplication circ
 Multiplication is a good case study, as it is one of the easy floating-point operations,
 and yet highlights the key steps of the bitblasting pipeline.
 
-\begin{wrapfigure}[25]{r}{0.42\textwidth}
+\begin{wrapfigure}[30]{r}{0.42\textwidth}
 \centering
 \small
 \begin{minipage}{0.40\textwidth}
@@ -344,7 +344,8 @@ Our mechanized semantics of multiplication (left) is a direct transcription of t
 def mul 
     (M : RoundMethod (PackedFloat e s) R)
     (rm : RoundingMode)
-    (x y : PackedFloat e s) : PackedFloat e s :=
+    (x y : PackedFloat e s) : 
+      PackedFloat e s :=
   -- the exact product, computed in R
   let z    := M.embed x * M.embed y
   -- IEEE sign rule: 
