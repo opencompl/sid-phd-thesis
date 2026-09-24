@@ -1579,19 +1579,18 @@ of CBMC~\cite{cbmc}, combining bit-precise and abstract reasoning to verify C pr
 Overall, we owe a great deal to the line of research that has developed the SMT-LIB floating-point theory and bitblasting encodings,
 and our work mechanizes and verifies these contributions by standing on their shoulders.
 
-\section{Limitations}
+\section{Discussion}
 \label{sec:fp:limitations}
 
-Three operations remain unproven:
+We have three operations that are unproven:
 round-to-integral, remainder, and the conversions to \texttt{ubv} and \texttt{sbv}.
-Their circuits are implemented and the solver bitblasts them,
-but what is missing is the mechanized correctness proof.
+Their circuits are implemented and the solver bitblasts them, but we're missing the proof of correctness.
 In a similar vein, we lack some of the sophisticated circuits that SymFPU implements,
 such as the multiple fast paths for addition that exploit various subnormal/normal cases for faster symbolic bitblasting.
 
-Closing both gaps is limited by proof effort rather than by floating-point insight,
-and it is worth being precise about why, because the same obstacle recurs across the thesis.
-The obligations that arise are overwhelmingly nonlinear, mixing multiplication of variables, integer division and modular arithmetic, powers of two with variable exponents, and bitvector operations.
-Existing automation closes none of them, so the proof scripts become dominated by arithmetic bookkeeping that is conceptually trivial but mechanically exhausting.
-Effective proof automation for nonlinear reasoning, ideally operating uniformly across \texttt{Nat}, \texttt{Int}, \texttt{Rat}, and \texttt{BitVec}, is therefore the key enabling technology for verified floating-point arithmetic at scale---%
-a thread we pick up in \cref{ch:future-work}, where it turns out to be the central lesson of the thesis rather than a difficulty local to this chapter.
+Closing both gaps is limited by proof effort rather than by floating-point insight.
+The obligations that arise are quite nonlinear, mixing multiplication of variables, integer division and modular arithmetic, powers of two with variable exponents, and bitvector operations.
+Existing automation cannot close these, so the proofs are dominated by arithmetic bookkeeping that is conceptually trivial but mechanically exhausting.
+Effective proof automation for nonlinear reasoning, ideally operating uniformly across \texttt{Nat}, \texttt{Int}, \texttt{Rat}, and \texttt{BitVec},
+is therefore the key enabling technology that we'd need for this at scale.
+Overall, though, it seems that proving the correctness of floating point bitblasting is tedious, error-prone, and hard, but not impossibly so!
