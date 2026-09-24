@@ -15,23 +15,20 @@ However, this makes the full SMT solver part of the trusted base,
 and the Alive approach only checks a handful of widths for each rewrite,
 both of which are gaps I aim to close in this thesis.
 The question this thesis asks is:
-\emph{given a peephole rewrite, how do I prove it correct, with no SMT solver in the trusted base?}
+\emph{given a peephole rewrite, how do I prove it correct in a proof assistant, with no SMT solver in the trusted base?}
 
 Toward this, I first formalized a core calculus for SSA-based compiler IRs~\citep{appel1998ssa,rastello2022ssa},
 generic over the user's IR, and proved a generic peephole rewriter correct,
 with case studies ranging from fully homomorphic encryption to LLVM's bitvector rewrites (\cref{ch:lean-mlir}).
 
-Next, when building push-button automation to enable peephole rewrite verification at scale,
+Next, when building proof automation to enable peephole rewrite verification at scale,
 I had to balance the competing concerns of \emph{performance} and \emph{trustworthiness}:
 Subtle algorithms can be fast, but they are hard to verify, and hard to change when the solver is updated.
 Simple algorithms are easy to verify, but they can be far too slow to be useful.
 
-\noindent I settled on bitblasting, an approach that enables both performance and trustworthiness,
-since one can reduce a problem in a rich theory to propositional logic,
-and then dispatch it to a state-of-the-art SAT solver.
+\noindent I settled on bitblasting, an approach that enables both performance and trustworthiness.
 For example, Lean's fixed-width bitvector tactic, \bvdecide{},
-starts with a bitvector goal, performs bitblasting to produce an equivalent SAT problem,
-dispatches it to a SAT solver,
+starts with a bitvector goal, performs bitblasting to produce an equivalent SAT problem, dispatches it to a SAT solver,
 and has the resulting certificate rechecked by Lean's kernel.
 This design stands on the shoulders of the progress of the last two decades
 both in SAT solving, which now scales to hundreds of millions of variables~\citep{biere2024cadical,kissatSATComp2024},
@@ -62,23 +59,11 @@ it was important to me that our solver be verified at all widths, not just the c
 The SymFPU line of work showed, in a sequence of papers, that bitblasting decisively
 outcompetes the alternatives for floating-point SMT solving.
 I follow this approach: I mechanize the SMT-LIB \qffp{} theory,
-and build verified bitblasting circuits for almost all of its operations.
-Moreover, our bitblaster is formally verified in Lean,
-thereby eliminating various trust issues around nonstandard floating-point formats and rounding modes.
-
-% At the end of bulding the floating point solver, I learnt of an alternative that practitioners increasingly care about:
-% treat floating-point numbers as if they were reals,
-% and decide a fragment of arithmetic that has all the field operations, along with exponentiation and square root.
-% I adapt algorithms introduced by the Triton team~\citep{openai2026fpsan} into a new solver design
-% for bounded verification of this logic by bitblasting,
-% and sketch it as a counterpoint to the IEEE-semantics approach (\cref{ch:future-work}).
-
-
-In summary, this thesis builds a framework that decouples peephole rewrite verification from structural SSA manipulation,
-width-generic bitvector solvers that prove more problems than the unverified state of the art,
-and the first formally verified floating-point bitblaster,
-which is slower than Bitwuzla and offers in exchange guarantees that reach down to Lean's kernel.
-I hope that this thesis provides new ideas for push-button verification for compiler optimization.
+and build bitblasting circuits for almost all of its operations.
+Then, we build theories for rational numbers, packed and unpacked floating point numbers, and the relationship between these components,
+in order to prove that the bitblasting circuits are correct relative to the floating point specification.
+Since these proofs are carried out in Lean,
+we eliminate various trust issues around nonstandard floating-point formats and rounding modes.
 
 \section{Contributions}
 

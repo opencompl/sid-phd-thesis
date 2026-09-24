@@ -9,7 +9,7 @@ and we built verified decision procedures to automatically discharge proof oblig
 %Our floating-point bitblaster trails Bitwuzla by a geometric-mean factor of $\SmtlibRandSpeedupBitwuzlaOverOurs\times$,
 %and the fixed-width bitvector engine it is built on is itself within roughly an order of magnitude of Bitwuzla's.
 %What that price buys is an end-to-end correctness guarantee that reaches down to Lean's kernel.
-Together, our solvers provide evidence that the finite-domain reasoning that underpins compilers,
+Together, our solvers provide evidence that the finite-domain reasoning which underpins compilers
 can be carried out inside a proof assistant, at scale.
 
 Looking back, I can see many open problems that remain. I'll describe the three frontiers I find most exciting:
@@ -70,11 +70,12 @@ The overall idea is to reduce the problem to thinking of tensor operations as a 
 and ``elementwise'' operations, which together can be combined to decide the theory of tensors.
 Firstly, for elementwise operations, FpSan~\citep{openai2026fpsan} gives floating-point level equivalence, and guarantees equivalence upto an exponential ring,
 which is what ML practitioners care about anyway. It can be implemented as a bitvector solver, and I have a prototypical implementation of it in Lean.
-Seondly, TensorRight~\citep{arora2025tensorright} is an algorithm for shape level equivalence.
+Secondly, TensorRight~\citep{arora2025tensorright} is an algorithm for shape level equivalence.
 The key idea is similar to that of our parametric bitvector solver,
-that shows that for every shape-based equivalence, one can compute a finite upper bound on the dimensions of the tensors that must be checked, and then checking upto that cutoff.
-This does not immediately give a SAT-friendly encoding.
-To achieve this, we propose using (3) Linear layouts~\citep{zhou2026linear}, which showed how by making the mild assumption that all tensor sizes are powers of 2,
+that shows that for every shape-based equivalence, one can compute a finite upper bound on the dimensions of the tensors that must be checked.
+Then, checking upto this cutoff establishes equivalence for all unbounded ranks.
+Note that this does not immediately give a SAT-friendly encoding.
+To then use the ideas to get a bitblastable encoding, we propose using (3) Linear layouts~\citep{zhou2026linear}, which showed how by making the mild assumption that all tensor sizes are powers of 2,
 basically all tensor based shape operations can be encoded efficiently as linear algebra over $Z/2Z$. This of course provides extremely convenient bitvector encodings.
 The three ingredients are in place, and the missing piece is to combine them correctly, and filling the holes in each theory with support from the others.
 
