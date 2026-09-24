@@ -4,6 +4,10 @@ Download:
 [Thesis (with comments)](../../releases/latest/download/thesis.pdf) |
 [Submission (without comments)](../../releases/latest/download/thesis-submission.pdf)
 
+## Help On Where And How to Submit
+
+- [Submission Help Link](https://www.cst.cam.ac.uk/local/phd/submission)
+
 ## Currently Working On
 
 - Overviews of each chapter, don't need to reintro stuff.
