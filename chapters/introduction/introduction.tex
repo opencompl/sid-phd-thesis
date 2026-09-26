@@ -9,37 +9,39 @@ This approach is not only expensive, but is also brittle: Once proven correct,
 any change to a verified compiler requires a new proof.
 However, we would like to use formal verification to ensure that our compilers \emph{in production} are correct,
 and that they remain correct as they evolve.
-A major source of inspiration is the Alive line of work on LLVM's instruction combiner~\citep{lopes2015provably,lopes2021alive2},
-which is used habitually by LLVM developers to formally verify new peephole rewrites that are added into LLVM every day.
+A major source of inspiration is the Alive line of work on LLVM's~\citep{lattner2004llvm} instruction combiner~\citep{lopes2015provably,lopes2021alive2},
+which is used habitually by LLVM developers to formally verify new peephole rewrites~\citep{mckeeman1965peephole} that are added into LLVM every day.
 Alive is particularly attractive, since it is entirely automatic: It enables LLVM developers
 to write a peephole rewrite, push a button, and have Alive either prove the rewrite correct or produce a counterexample.
 This level of usability is crucial for LLVM developers, who are not experts in formal verification.
 However, Alive has a large trusted code base, which includes (a) its notion of the semantics of LLVM IR,
-(b) its translation of LLVM IR into SMT, and (c) the SMT solver itself.
-So, building something such as Alive in a fully verified setting would be a beachhead toward verified compilation of production grade compilers,
+(b) its translation of LLVM IR into SMT~\citep{barrett2010smt,smtlib}, and (c) the SMT solver itself.
+So, building something such as Alive in a fully verified setting, as AliveInLean began to do~\citep{lee2019aliveinlean}, would be a beachhead toward verified compilation of production-grade compilers,
 and I set out to make progress toward this goal in this thesis.
 \sid{TODO: write more about why this is interesting}
 
 So, we wonder, what are the components we would need to replicate the success of Alive in a fully verified setting?
-Firstly, we would need a way to express the semantics of the compiler IR whose peephole rewrites we wish to verify.
-Secondly, a translation of the semantics into SMT, which may involve complex encodings for features such as memory, nondeterminism, and undefined behaviour. Thirdly, if we wish for all of this to be formally verified, we also require the SMT solver itself to be verified,
+Firstly, we would need a way to express the semantics of the compiler IR whose peephole rewrites we wish to verify~\citep{zhao2012formalizing,zakowski2021modular}.
+Secondly, a translation of the semantics into SMT, which may involve complex encodings for features such as memory, nondeterminism, and undefined behaviour~\citep{lee2017taming}. Thirdly, if we wish for all of this to be formally verified, we also require the SMT solver itself to be verified,
 in order to ensure a small trusted code base.
-In this thesis, I tackle the first and third problem, and indicate how progress can be made on the second problem.
+In this thesis, I tackle the first and third problems, and indicate how progress can be made on the second problem.
 
 Firstly, in order to be able to express an LLVM-like compiler IR and peephole rewrites on them,
-we would like to reason about the semantics of these IRs in our choice of proof assistant (Lean).
+we would like to reason about the semantics of these IRs in our choice of proof assistant, Lean~\citep{demoura2021lean}.
 Note that LLVM is an SSA-based compiler IR~\citep{appel1998ssa,rastello2022ssa},
 which allows for peephole rewriting to be performed \emph{sparsely} on the IR.
 That is, one can match a pattern of instructions that are connected by dataflow, 
-and replace them with a new set of instructions, without these instructions needing to be contiguous in the IR.
+and replace them with a new set of instructions, without these instructions needing to be contiguous in the IR, as they must be in assembly-level peephole rewriters~\citep{mullen2016verified}.
 To both express the semantics of SSA-based IRs, and to reason about the correctness of peephole rewrites on them,
-I designing a core calculus for these. A particular complicating factor was interest in supporting \emph{regions},
-which allow one to express ...
+I designed a core calculus for these. A particular complicating factor was interest in supporting \emph{regions},
+which allow one to express structured control flow directly in the IR:
+an operation receives entire blocks of code as arguments, and chooses to run them zero, one, or many times.
+This is how MLIR~\citep{lattner2021mlir} writes down an \texttt{if}, a \texttt{for} loop, or a tensor convolution.
 Moreover, I proved a lifting lemma, that shows that a peephole rewrite that is correct under a ``straight line'' interpretation of the IR
 is also correct when used in a ``sparse rewriting'' context, which is the actual use case in LLVM.
 In using the framework in anger to express the semantics of LLVM IR,
 and attempting to build sets of tactics that automatically close LLVM-style rewrite goals,
-I came to the conclusion that ad-hoc, Chlipala-style \emph{crush} tactics was insufficient,
+I came to the conclusion that ad-hoc, Chlipala-style \emph{crush} tactics~\citep{chlipala2013certified} were insufficient,
 and that one really did require a principled approach for establishing program equivalence.
 
 % generic over the user's IR, and proved a generic peephole rewriter correct,
@@ -49,7 +51,7 @@ and that one really did require a principled approach for establishing program e
 % Subtle algorithms can be fast, but they are hard to verify, and hard to change when the solver is updated.
 % Simple algorithms are easy to verify, but they can be far too slow to be useful.
 Thinking back to Alive, it's clear that the SMT solver is a crucial component of its success.
-However, SMT solvers are large and complex pieces of software, and are not typically formally verified.
+However, SMT solvers are large and complex pieces of software~\citep{de2008z3,barbosa2022cvc5}, and are not typically formally verified.
 For example, Bitwuzla~\citep{niemetz2023bitwuzla}, the state-of-the-art SMT solver for bitvectors and floating point,
 has a code base where bitvector solving alone is over 10k lines of C++ code.
 At the same time, there was interest in the Lean community to have verified 
@@ -58,11 +60,11 @@ a large fragment of LLVM's semantics in Lean.
 Therefore, I turned to help grow Lean's ecosystem for fixed-width bitvector solving.
 This involved adding a large library of lemmas to Lean's bitvector library,
 and, much more interestingly, showing that the abstractly defined bitvector operations, given in terms of their 
-interpretation as natual numbers, can be computed by an arithmetic circuit.
-This is a key step in transforming a bitvector predicate into a SAT problem,
+interpretation as natural numbers, can be computed by an arithmetic circuit.
+This is a key step in transforming a bitvector predicate into a SAT problem~\citep{kroening2016decision},
 which is the first step in implementing a verified bitvector solver.
-To go into a little more detail, the bitvector solver that I helped implement (\bvdecide{})
-is Lean's first-class bitvector solver, and is implement as a Lean tactic.
+To go into a little more detail, the bitvector solver that I helped implement (\bvdecide{}~\citep{leanbv})
+is Lean's first-class bitvector solver, and is implemented as a Lean tactic.
 Given a bitvector goal, we first convert the goal to an equivalent goal about arithmetic circuits.
 This proof obligation on arithmetic circuits is entirely finite, and can therefore be dispatched to a SAT solver.
 The SAT solver produces a certificate of unsatisfiability, and the resulting certificate is then rechecked by Lean's kernel.
@@ -87,14 +89,14 @@ as well as to have support for arrays and floating point.
 
 In thinking about the problem of being able to successfully formally verify a Bitwuzla-scale SMT solver,
 I began to give the area of \emph{parametric bitvector solving} some more thought.
-This is a fledgeling area of SMT solving, where one develops decision procedures to decide propositions over bitvectors of a \emph{symbolic width}.
-Prior art in this area depended on reductions to undecidable theories (such as nonlinear integer arithmetic),
-or an incomplete set of equivalence relations which are used to explore equalities.
-Moreover, in practice, tools like Alive that actually \emph{do} attempt to solve the parametric bitvector problem simply involved a fixed-width bitvector solver by enumerating all possible widths, and bitblasting each one separately.
+This is a fledgling area of SMT solving, where one develops decision procedures to decide propositions over bitvectors of a \emph{symbolic width}.
+Prior art in this area depended on reductions to undecidable theories (such as nonlinear integer arithmetic)~\citep{bit-precise-parametric-bv},
+or an incomplete set of equivalence relations which are used to explore equalities~\citep{pichora2003automated,bjorner1998deciding}.
+Moreover, in practice, tools like Alive2~\citep{lopes2021alive2} and Hydra~\citep{hydra} that actually \emph{do} attempt to solve the parametric bitvector problem simply invoked a fixed-width bitvector solver by enumerating all possible widths, and bitblasting each one separately.
 I felt that we could do better, and that it must be possible to design principled algorithms for parametric bitvector problems.
-Toward this, for a fragment of bitvector theory, I devise a method (inspired by Presburger)
-that shows that the truth of fragments of parametric bitvector theory can be expressed as a safety property on a finite automation.
-This allows a reduction to the mature theory of model checking, and in particular, tools like $k$-induction and regular language emptiness
+Toward this, for a fragment of bitvector theory, I devise a method, inspired by the classical automata-theoretic treatment of Presburger arithmetic~\citep{Büchi1960,automata-strike-back},
+that shows that the truth of fragments of parametric bitvector theory can be expressed as a safety property on a finite automaton.
+This allows a reduction to the mature theory of model checking~\citep{biere1999symbolic,bradley2011sat}, and in particular, tools like $k$-induction~\citep{sheeran2000checking} and regular language emptiness
 (\cref{ch:mono-width}) can be used to create a sound and complete decision procedure for this fragment.
 However, the above technique only handled bitvectors with \emph{one} symbolic width.
 Next, by an encoding trick that writes widths as bitmasks,
@@ -104,22 +106,22 @@ Overall, this then built the theory that gave me confidence that we could verify
 which would be an important building block, both for verifying tools like Alive, but also for verifying the SMT solver itself!
 
 The next major blocker to reach feature parity with Bitwuzla was having a floating point solver. 
-Bitwuzla itself uses a library, SymFPU in order to build symbolic circuits that converting floating point predicates into a SAT formula.
+Bitwuzla itself uses a library, SymFPU~\citep{symfpu}, to build symbolic circuits that convert floating point predicates into a SAT formula, as does cvc5~\citep{barbosa2022cvc5}.
 The SymFPU line of work showed, in a sequence of papers, that bitblasting decisively outcompetes the alternative
-techniques such as interval based analyses for floating-point SMT solving.
+techniques such as interval-based analyses for floating-point SMT solving.
 However, SymFPU's bitblasting circuits are large, complex, and have never been formally verified before.
-Moreover, tools that use SymFPU's circuits, such as Bitwuzla, only support ``standard'' floating point formats that are the 32-bit and 64-bit floats,
+Moreover, tools that use SymFPU's circuits, such as Bitwuzla, only support ``standard'' floating point formats, namely the 32-bit and 64-bit floats,
 due to a lack of confidence in the correctness of the circuits for all possible configurations of exponent and mantissa sizes.
-However, machine learning has been pushing small, exotic floating point formats into production hardware~\citep{fp8fordl},
+However, machine learning has been pushing small, exotic floating point formats into production hardware~\citep{fp8fordl,flops},
 making it all the more important that we have a verified floating point solver that guarantees correctness at all widths, not just the common ones.
 
 % These circuits are very complex, and have never been formally verified before.
 % Moreover, all tools ... <write about how other SMT solvers have bugs in them>.
 
-Toward a verified floating point solver, that guarantees correctness across all floating point formats,
+Toward a verified floating point solver that guarantees correctness across all floating point formats,
 it was important that the solver be verified at all widths, not just the common ones.
 However, there's a question of what even the \emph{specification} of floating point is,
-as the IEEE 754 standard is english prose, and not a formal specification.
+as the IEEE 754 standard is English prose, and not a formal specification; its existing mechanizations target interactive numerical proofs rather than solvers~\citep{harrison1999machine,boldo2011flocq,isabellefp}.
 To address this, I chose the SMT-LIB \qffp{} theory~\citep{extrealsemantics}
 as the floating point specification, since while it is still in English prose,
 it is much more mathematically precise than the IEEE 754 standard, and is widely used in the SMT community,
