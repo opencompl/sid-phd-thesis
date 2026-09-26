@@ -3,67 +3,143 @@
 \epigraph{It is a laborious madness and an impoverishing one, the madness of composing vast books, setting out in five hundred pages an idea that can be perfectly related orally in five minutes.}{Jorge Luis Borges, Prologue to The Garden of Forking Paths}
 
 \lettrine{T}he tradition of verified compilation~\citep{leroy2016compcert,kumar2014cakeml}
-teaches that verifying even a modest compiler end to end is the work of many person-years.
-Consequently, I focus on enabling automated formal verification of the peephole rewriter~\citep{mckeeman1965peephole},
-a large, critical, but modular component of a production compiler,
-whose unit of work is a single, local transformation on a finite window of instructions.
-Each transformation is small enough to state precisely and prove correct,
-which has long made the rewriter the natural beachhead for verification.
-For example, the Alive line of work on LLVM's instruction combiner~\citep{lopes2015provably,lopes2021alive2}
-translates LLVM rewrites into SMT and discharges them automatically.
-However, this makes the full SMT solver part of the trusted base,
-and the Alive approach only checks a handful of widths for each rewrite,
-both of which are gaps I aim to close in this thesis.
-The question this thesis asks is:
-\emph{given a peephole rewrite, how do I prove it correct in a proof assistant, with no SMT solver in the trusted base?}
+teaches us that verifying even a modest compiler end to end is the work of many person-years.
+% Consequently, in this thesis, I focus on enabling automated formal verification of the peephole rewriter~\citep{mckeeman1965peephole},
+This approach is not only expensive, but is also brittle: Once proven correct,
+any change to a verified compiler requires a new proof.
+However, we would like to use formal verification to ensure that our compilers \emph{in production} are correct,
+and that they remain correct as they evolve.
+A major source of inspiration is the Alive line of work on LLVM's instruction combiner~\citep{lopes2015provably,lopes2021alive2},
+which is used habitually by LLVM developers to formally verify new peephole rewrites that are added into LLVM every day.
+Alive is particularly attractive, since it is entirely automatic: It enables LLVM developers
+to write a peephole rewrite, push a button, and have Alive either prove the rewrite correct or produce a counterexample.
+This level of usability is crucial for LLVM developers, who are not experts in formal verification.
+However, Alive has a large trusted code base, which includes (a) its notion of the semantics of LLVM IR,
+(b) its translation of LLVM IR into SMT, and (c) the SMT solver itself.
+So, building something such as Alive in a fully verified setting would be a beachhead toward verified compilation of production grade compilers,
+and I set out to make progress toward this goal in this thesis.
+\sid{TODO: write more about why this is interesting}
 
-Toward this, I first formalized a core calculus for SSA-based compiler IRs~\citep{appel1998ssa,rastello2022ssa},
-generic over the user's IR, and proved a generic peephole rewriter correct,
-with case studies ranging from fully homomorphic encryption to LLVM's bitvector rewrites (\cref{ch:lean-mlir}).
+So, we wonder, what are the components we would need to replicate the success of Alive in a fully verified setting?
+Firstly, we would need a way to express the semantics of the compiler IR whose peephole rewrites we wish to verify.
+Secondly, a translation of the semantics into SMT, which may involve complex encodings for features such as memory, nondeterminism, and undefined behaviour. Thirdly, if we wish for all of this to be formally verified, we also require the SMT solver itself to be verified,
+in order to ensure a small trusted code base.
+In this thesis, I tackle the first and third problem, and indicate how progress can be made on the second problem.
 
-Next, when building proof automation to enable peephole rewrite verification at scale,
-I had to balance the competing concerns of \emph{performance} and \emph{trustworthiness}:
-Subtle algorithms can be fast, but they are hard to verify, and hard to change when the solver is updated.
-Simple algorithms are easy to verify, but they can be far too slow to be useful.
+Firstly, in order to be able to express an LLVM-like compiler IR and peephole rewrites on them,
+we would like to reason about the semantics of these IRs in our choice of proof assistant (Lean).
+Note that LLVM is an SSA-based compiler IR~\citep{appel1998ssa,rastello2022ssa},
+which allows for peephole rewriting to be performed \emph{sparsely} on the IR.
+That is, one can match a pattern of instructions that are connected by dataflow, 
+and replace them with a new set of instructions, without these instructions needing to be contiguous in the IR.
+To both express the semantics of SSA-based IRs, and to reason about the correctness of peephole rewrites on them,
+I designing a core calculus for these. A particular complicating factor was interest in supporting \emph{regions},
+which allow one to express ...
+Moreover, I proved a lifting lemma, that shows that a peephole rewrite that is correct under a ``straight line'' interpretation of the IR
+is also correct when used in a ``sparse rewriting'' context, which is the actual use case in LLVM.
+In using the framework in anger to express the semantics of LLVM IR,
+and attempting to build sets of tactics that automatically close LLVM-style rewrite goals,
+I came to the conclusion that ad-hoc, Chlipala-style \emph{crush} tactics was insufficient,
+and that one really did require a principled approach for establishing program equivalence.
 
-\noindent I settled on bitblasting, an approach that enables both performance and trustworthiness.
-For example, Lean's fixed-width bitvector tactic, \bvdecide{},
-starts with a bitvector goal, performs bitblasting to produce an equivalent SAT problem, dispatches it to a SAT solver,
-and has the resulting certificate rechecked by Lean's kernel.
+% generic over the user's IR, and proved a generic peephole rewriter correct,
+% with case studies ranging from fully homomorphic encryption to LLVM's bitvector rewrites (\cref{ch:lean-mlir}).
+% Next, when building proof automation to enable peephole rewrite verification at scale,
+% I had to balance the competing concerns of \emph{performance} and \emph{trustworthiness}:
+% Subtle algorithms can be fast, but they are hard to verify, and hard to change when the solver is updated.
+% Simple algorithms are easy to verify, but they can be far too slow to be useful.
+Thinking back to Alive, it's clear that the SMT solver is a crucial component of its success.
+However, SMT solvers are large and complex pieces of software, and are not typically formally verified.
+For example, Bitwuzla~\citep{niemetz2023bitwuzla}, the state-of-the-art SMT solver for bitvectors and floating point,
+has a code base where bitvector solving alone is over 10k lines of C++ code.
+At the same time, there was interest in the Lean community to have verified 
+fixed-width bitvector solving, which would allow us to express, and automatically discharge,
+a large fragment of LLVM's semantics in Lean.
+Therefore, I turned to help grow Lean's ecosystem for fixed-width bitvector solving.
+This involved adding a large library of lemmas to Lean's bitvector library,
+and, much more interestingly, showing that the abstractly defined bitvector operations, given in terms of their 
+interpretation as natual numbers, can be computed by an arithmetic circuit.
+This is a key step in transforming a bitvector predicate into a SAT problem,
+which is the first step in implementing a verified bitvector solver.
+To go into a little more detail, the bitvector solver that I helped implement (\bvdecide{})
+is Lean's first-class bitvector solver, and is implement as a Lean tactic.
+Given a bitvector goal, we first convert the goal to an equivalent goal about arithmetic circuits.
+This proof obligation on arithmetic circuits is entirely finite, and can therefore be dispatched to a SAT solver.
+The SAT solver produces a certificate of unsatisfiability, and the resulting certificate is then rechecked by Lean's kernel.
 This design stands on the shoulders of the progress of the last two decades
 both in SAT solving, which now scales to hundreds of millions of variables~\citep{biere2024cadical,kissatSATComp2024},
 and in UNSAT certificates, where the DRAT format~\citep{heule2016drat} and its
 hint-carrying refinement LRAT~\citep{cruz2017efficient} were developed to
 let SAT solvers express all of their tricks while still enabling fast verification of the result.
-% The design of UNSAT cerificates is very interesting, since there is a tension between the solver's desire to express its reasoning in a compact way,
-% and the verifier's desire to check the reasoning in a simple way.
-Toward this, I helped implement bitblasting in \bvdecide{}, which mirrors the state-of-the-art SMT solver Bitwuzla~\citep{niemetz2023bitwuzla}.
-This provides the push-button automation I needed to verify rewrites at a \emph{concrete} bitwidth (e.g. \texttt{i64}).
-While this is a significant step forward, it is not enough.
-An LLVM rewrite must be correct at \emph{every} register width: \texttt{i8}, \texttt{i32}, and even \texttt{i1729}.
-The standard remedy, used for example by the Alive2 peephole rewrite verifier,
-is to enumerate the widths and bitblast each one separately.
+Overall, this design allows us to have a small trusted code base, while still being able to leverage the power of modern SAT solvers.
+It made me realize that the key design principle of implementing such a verified solver should be to rely on certificates,
+since these permit us to leverage fast, unverified solvers, while still having a small trusted code base.
 
-In this thesis, I show that such exhaustive enumeration is unnecessary.
-For a fragment of bitvector theory, predicates which hold at all widths reduce to reachability in a finite automaton,
-which can be decided by $k$-induction, or by regular language emptiness (\cref{ch:mono-width}).
+During the process of helping to implement \bvdecide{},
+I read through quite a lot of the source code of the state-of-the-art SMT solver Bitwuzla~\citep{niemetz2023bitwuzla},
+which heavily inspired \bvdecide{}'s internals. In doing so, I began to wonder what it would take to \emph{really}
+have all of Bitwuzla be formally verified in Lean.
+For this, we needed to verify hundreds of bitvector rewrites that Bitwuzla performs internally in order to simplify the problem statement,
+as well as to have support for arrays and floating point.
+% An LLVM rewrite must be correct at \emph{every} register width: \texttt{i8}, \texttt{i32}, and even \texttt{i1729}.
+% The standard remedy, used for example by the Alive2 peephole rewrite verifier,
+% is to enumerate the widths and bitblast each one separately.
+
+In thinking about the problem of being able to successfully formally verify a Bitwuzla-scale SMT solver,
+I began to give the area of \emph{parametric bitvector solving} some more thought.
+This is a fledgeling area of SMT solving, where one develops decision procedures to decide propositions over bitvectors of a \emph{symbolic width}.
+Prior art in this area depended on reductions to undecidable theories (such as nonlinear integer arithmetic),
+or an incomplete set of equivalence relations which are used to explore equalities.
+Moreover, in practice, tools like Alive that actually \emph{do} attempt to solve the parametric bitvector problem simply involved a fixed-width bitvector solver by enumerating all possible widths, and bitblasting each one separately.
+I felt that we could do better, and that it must be possible to design principled algorithms for parametric bitvector problems.
+Toward this, for a fragment of bitvector theory, I devise a method (inspired by Presburger)
+that shows that the truth of fragments of parametric bitvector theory can be expressed as a safety property on a finite automation.
+This allows a reduction to the mature theory of model checking, and in particular, tools like $k$-induction and regular language emptiness
+(\cref{ch:mono-width}) can be used to create a sound and complete decision procedure for this fragment.
+However, the above technique only handled bitvectors with \emph{one} symbolic width.
 Next, by an encoding trick that writes widths as bitmasks,
-any formula over $n$ symbolic widths reduces to an equisatisfiable formula at a single width (\cref{ch:multi-width}),
+I show that any formula over $n$ symbolic widths reduces to an equisatisfiable formula at a single width (\cref{ch:multi-width}),
 trading an exponential number of solver queries for a \emph{single} query and carving out a new sound and complete fragment of the multi-width theory.
-% The reach of bitblasting, it turns out, extends all the way to the parametric bitvector theory.
+Overall, this then built the theory that gave me confidence that we could verify parametric bitvector rewrites at scale,
+which would be an important building block, both for verifying tools like Alive, but also for verifying the SMT solver itself!
 
-Finally, I also wanted to support floating-point reasoning, which is important for emerging applications in machine learning workloads.
-Since machine learning is pushing small, exotic formats such as E4M3 and E5M2 into production hardware~\citep{fp8fordl},
-and these are precisely the formats on which existing solvers are least tested and most fragile,
-it was important to me that our solver be verified at all widths, not just the common ones.
-The SymFPU line of work showed, in a sequence of papers, that bitblasting decisively
-outcompetes the alternatives for floating-point SMT solving.
-I follow this approach: I mechanize the SMT-LIB \qffp{} theory,
-and build bitblasting circuits for almost all of its operations.
-Then, we build theories for rational numbers, packed and unpacked floating point numbers, and the relationship between these components,
-in order to prove that the bitblasting circuits are correct relative to the floating point specification.
-Since these proofs are carried out in Lean,
-we eliminate various trust issues around nonstandard floating-point formats and rounding modes.
+The next major blocker to reach feature parity with Bitwuzla was having a floating point solver. 
+Bitwuzla itself uses a library, SymFPU in order to build symbolic circuits that converting floating point predicates into a SAT formula.
+The SymFPU line of work showed, in a sequence of papers, that bitblasting decisively outcompetes the alternative
+techniques such as interval based analyses for floating-point SMT solving.
+However, SymFPU's bitblasting circuits are large, complex, and have never been formally verified before.
+Moreover, tools that use SymFPU's circuits, such as Bitwuzla, only support ``standard'' floating point formats that are the 32-bit and 64-bit floats,
+due to a lack of confidence in the correctness of the circuits for all possible configurations of exponent and mantissa sizes.
+However, machine learning has been pushing small, exotic floating point formats into production hardware~\citep{fp8fordl},
+making it all the more important that we have a verified floating point solver that guarantees correctness at all widths, not just the common ones.
+
+% These circuits are very complex, and have never been formally verified before.
+% Moreover, all tools ... <write about how other SMT solvers have bugs in them>.
+
+Toward a verified floating point solver, that guarantees correctness across all floating point formats,
+it was important that the solver be verified at all widths, not just the common ones.
+However, there's a question of what even the \emph{specification} of floating point is,
+as the IEEE 754 standard is english prose, and not a formal specification.
+To address this, I chose the SMT-LIB \qffp{} theory~\citep{extrealsemantics}
+as the floating point specification, since while it is still in English prose,
+it is much more mathematically precise than the IEEE 754 standard, and is widely used in the SMT community,
+whose algorithms we plan to use anyway.
+So, we begin by mechanizing the SMT-LIB \qffp{} theory in Lean.
+Next, in order to implement a floating point solver, we need to be able to reduce floating point formulas to bitvector formulas.
+I began by studying the SymFPU algorithms, and then re-implementing them in Lean.
+In doing so, there were certain areas where I had to use looser bounding assumptions than SymFPU.
+It remains not totally clear to me whether SymFPU's algorithms are correct for all possible floating point formats,
+but I was able to mechanize our understanding of the SymFPU algorithms and prove them correct relative to the SMT-LIB specification.
+To do this, I built theories for rational numbers, packed and unpacked floating point numbers, and the relationship between these components.
+Overall, this work culminated in the first verified floating point bitblaster,
+which proves the correctness of most of the SymFPU algorithms, and guarantees correctness at all floating point formats.
+
+
+Overall, in order to build toward the goal of ``verified production-grade compilation'',
+I made progress on two fronts. Firstly, toward that of being able to express peephole rewrites
+and reason about their correctness in a proof assistant, and secondly,
+toward that of being able to build verified theory solvers that can be used to automatically discharge
+the proof obligations that arise from reasoning about peephole rewrites on (parametric) bitvectors and floating point.
 
 \section{Contributions}
 
@@ -93,14 +169,14 @@ small-format (E4M3/E5M2) benchmarks~\citep{fp8fordl}.
 \publishedat{Submitted @ POPL~2027~\citep{bhat2027floatingpoint}}
 
 \paragraph{Publications and Attribution.}
-Each contribution above is based on the publication whose venue is named beside it,
+Each contribution above is based on a publication or submission,
 and the corresponding chapter reuses text from that paper.
 All of these works are collaborative.
-I nevertheless write ``I'' throughout this thesis, for readability.
+I nevertheless write ``I'' throughout this thesis for readability.
 Each of these chapters opens with an attribution note that states which parts of the work are mine.
 I also draw on ``Interactive Bitvector Reasoning using Verified Bit-Blasting''~\citep{leanbv} (OOPSLA~2025),
 the fixed-width bitvector bitblasting paper on which I am the second author.
-That work is presented as background rather than as a contribution of this thesis.
+That work is presented as background on bitblasting.
 
 % \paragraph{Plan of This Thesis.}
 % Two background chapters serve the two halves of the thesis.

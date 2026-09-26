@@ -7,6 +7,8 @@ Download:
 ## Help On Where And How to Submit
 
 - [Submission Help Link](https://www.cst.cam.ac.uk/local/phd/submission)
+- [Checklist](https://www.cambridgestudents.cam.ac.uk/your-course/research-students-pgr/postgraduate-exam-information/writing-submitting-and-examination/phd/submit)
+- [Statement of Length and Declaration Form](https://www.cambridgestudents.cam.ac.uk/files/declaration_form_for_thesis_for_examination.pdf)
 
 ## Currently Working On
 
