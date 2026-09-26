@@ -103,13 +103,11 @@ which heavily inspired \bvdecide{}'s internals. In doing so, I began to wonder w
 have all of Bitwuzla be formally verified in Lean.
 For this, we needed to verify hundreds of bitvector rewrites that Bitwuzla performs internally in order to simplify the problem statement,
 as well as to have support for arrays and floating point.
-% An LLVM rewrite must be correct at \emph{every} register width: \texttt{i8}, \texttt{i32}, and even \texttt{i1729}.
-% The standard remedy, used for example by the Alive2 peephole rewrite verifier,
-% is to enumerate the widths and bitblast each one separately.
 
 In thinking about the problem of being able to successfully formally verify a Bitwuzla-scale SMT solver,
 I began to give the area of \emph{parametric bitvector solving} some more thought.
 This is a fledgling area of SMT solving, where one develops decision procedures to decide propositions over bitvectors of a \emph{symbolic width}.
+Why should we care? Because an LLVM rewrite must be correct at \emph{every} register width: \texttt{i8}, \texttt{i32}, and even \texttt{i1729}.
 Prior art in this area depended on reductions to undecidable theories (such as nonlinear integer arithmetic)~\citep{bit-precise-parametric-bv},
 or an incomplete set of equivalence relations which are used to explore equalities~\citep{pichora2003automated,bjorner1998deciding},
 OR INDUCTIVE FAMILIES OF BOOLEAN CIRCUITS THAT SPLIT A BASE CASE FROM AN INDUCTIVE STEP~\citep{gupta1993parametric,gupta1993representation}.
