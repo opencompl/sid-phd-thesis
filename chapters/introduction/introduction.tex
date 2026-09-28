@@ -9,27 +9,34 @@ This approach is not only expensive, but is also brittle: Once proven correct,
 any change to a verified compiler requires a new proof.
 However, we would like to use formal verification to ensure that our compilers \emph{in production} are correct,
 and that they remain correct as they evolve.
-WHY NOT, THEN, CHECK EACH RUN OF THE COMPILER, RATHER THAN THE COMPILER ITSELF?
-TRANSLATION VALIDATION DOES PRECISELY THIS~\citep{pnueli1998translation}, AND HAS BEEN CARRIED AS FAR AS MACHINE LEARNING COMPILERS~\citep{DBLP:conf/cav/BangNCJL22};
-COMPOSITIONAL VARIANTS OF COMPCERT SOFTEN THE COST OF CHANGE FROM THE OTHER DIRECTION~\citep{stewart2015compositional,song2019compcertm,koenig2021compcerto,patterson2019next}.
-YET NEITHER HANDS A COMPILER DEVELOPER A PUSH-BUTTON ANSWER FOR THE ONE REWRITE THEY WROTE THIS MORNING.
-A major source of inspiration is the Alive line of work on LLVM's~\citep{lattner2004llvm} instruction combiner~\citep{lopes2015provably,lopes2021alive2},
-which is used habitually by LLVM developers to formally verify new peephole rewrites~\citep{mckeeman1965peephole} that are added into LLVM every day.
-Alive is particularly attractive, since it is entirely automatic: It enables LLVM developers
-to write a peephole rewrite, push a button, and have Alive either prove the rewrite correct or produce a counterexample.
+One approach to being able to evolve production-level compilers incrementally
+is to use translation validation~\citep{pnueli1998translation}, which tries to check the correctness of each \emph{run} of a compiler,
+with automated reasoning to discharge the proof obligations that arise from this check.
+This can be quite successful, but requires tuning of the automated reasoning engine,
+and does not provide a direct push-button experience for developers who are not experts in formal verification.
+In contrast, Alive ~\citep{lopes2015provably,lopes2021alive2}  offers push-button automation for 
+automatically proving peephole rewrites in LLVM's peephole rewriter~\citep{lattner2004llvm}.
+Alive is used habitually by LLVM developers to formally verify new peephole rewrites that are added into LLVM every day.
+This is very attractive, as it is entirely automatic,
+and does not require manual tweaking of Alive to successfully verify the rewrite (or produce a counterexample).
 This level of usability is crucial for LLVM developers, who are not experts in formal verification.
-THE RECIPE HAS SINCE SPREAD WELL BEYOND LLVM: TO SYNTHESIZING NEW REWRITES RATHER THAN CHECKING OLD ONES~\citep{hydra},
-TO REWRITES OVER TENSOR GRAPHS~\citep{arora2025tensorright}, AND TO RTL OPTIMIZATION IN HARDWARE~\citep{DBLP:journals/tcad/CowardDC24}.
-However, Alive has a large trusted code base, which includes (a) its notion of the semantics of LLVM IR,
-(b) its translation of LLVM IR into SMT~\citep{barrett2010smt,smtlib}, and (c) the SMT solver itself.
-So, building something such as Alive in a fully verified setting, as AliveInLean began to do~\citep{lee2019aliveinlean}, would be a beachhead toward verified compilation of production-grade compilers,
-and I set out to make progress toward this goal in this thesis.
-AND WHY IS THIS NOT ALREADY DONE? ALIVEINLEAN STILL TRUSTS AN EXTERNAL SMT SOLVER;
-AND THE OTHER ROUTE, OF VERIFYING REWRITES INSIDE A VERIFIED COMPILER, HAS SO FAR MEANT EITHER ASSEMBLY-LEVEL PATTERNS OF A FIXED SHAPE~\citep{mullen2016verified},
-OR PROVING ONE OPTIMIZATION CORRECT AT A TIME~\citep{zhao2013formal,courant2021verified}.
-\sid{TODO: write more about why this is interesting}
+This works well due to Alive's careful choice of scoping, and its use of SMT solving to automatically discharge proof obligations.
+Moreover, the recipe has since spread beyond Alive. Similar tooling can be built to synethesize new writes~\citep{hydra},
+to check rewrites over more complex objects such as tensors~\citep{arora2025tensorright}, or RTL~\citep{DBLP:journals/tcad/CowardDC24}.
 
-So, we wonder, what are the components we would need to replicate the success of Alive in a fully verified setting?
+
+\paragraph{Why not Alive?}
+Why are we not satisfied with Alive? Primarily,
+because Alive has a large trusted code base, which includes (a) its notion of the semantics of LLVM IR,
+(b) its translation of LLVM IR into SMT~\citep{barrett2010smt,smtlib}, and (c) the SMT solver itself.
+So, building something such as Alive in a fully verified setting, as AliveInLean began to do~\citep{lee2019aliveinlean},
+would be a beachhead toward verified compilation of production-grade compilers,
+and I set out to make progress toward this goal in this thesis.
+Previous efforts toward this problem have either relied on trust on an external SMT solver (as AliveInLean does),
+or have been limited to verifying one rewrite at a time, inside of an existing verified compiler~\citep{mullen2016verified}.
+We aim to go further, and to build a framework that really verify many rewrites in a push-button fashion, in a fully verified setting.
+
+So, what are the components we would need to build a fully-verified Alive?
 Firstly, we would need a way to express the semantics of the compiler IR whose peephole rewrites we wish to verify~\citep{zhao2012formalizing,zakowski2021modular}.
 Secondly, a translation of the semantics into SMT, which may involve complex encodings for features such as memory, nondeterminism, and undefined behaviour~\citep{lee2017taming}. Thirdly, if we wish for all of this to be formally verified, we also require the SMT solver itself to be verified,
 in order to ensure a small trusted code base.
@@ -58,6 +65,7 @@ OR, FOR A NARROW THEORY, THEY RUN A DECISION PROCEDURE INSIDE THE PROOF ASSISTAN
 THE FIRST IS FAST AND TRUSTS TOO MUCH; THE SECOND IS TRUSTWORTHY AND DECIDES TOO LITTLE.
 THIS THESIS SITS BETWEEN THE TWO: I WANT THE SPEED OF THE AUTOMATIC SOLVER, AND THE TRUST OF THE KERNEL.
 
+\paragraph{Toward verified SMT solving}
 % generic over the user's IR, and proved a generic peephole rewriter correct,
 % with case studies ranging from fully homomorphic encryption to LLVM's bitvector rewrites (\cref{ch:lean-mlir}).
 % Next, when building proof automation to enable peephole rewrite verification at scale,
@@ -89,13 +97,10 @@ both in SAT solving, which now scales to hundreds of millions of variables~\cite
 and in UNSAT certificates, where the DRAT format~\citep{heule2016drat} and its
 hint-carrying refinement LRAT~\citep{cruz2017efficient} were developed to
 let SAT solvers express all of their tricks while still enabling fast verification of the result.
+The idea is in the air at the moment, as \texttt{cvc5} too has begun to emit proofs that permits proof reconstruction~\citep{mohamed2025lean}.
 Overall, this design allows us to have a small trusted code base, while still being able to leverage the power of modern SAT solvers.
 It made me realize that the key design principle of implementing such a verified solver should be to rely on certificates,
 since these permit us to leverage fast, unverified solvers, while still having a small trusted code base.
-THE IDEA IS IN THE AIR: SMT SOLVERS HAVE BEGUN TO EMIT PROOFS~\citep{barrett2015proofs},
-THE HARDWARE MODEL CHECKING COMPETITION NOW ASKS FOR CERTIFICATES~\citep{hwmcc_certs},
-AND CHECKING AN LRAT PROOF CAN BE FASTER THAN FINDING IT~\citep{pollitt2023faster}.
-THE CLOSEST RELATIVE OF \bvdecide{} IS A CERTIFIED BITVECTOR SOLVER IN COQ~\citep{shi2021coqqfbv}; \bvdecide{} DIFFERS IN <FILL IN: RUNS AS A TACTIC IN LEAN'S KERNEL? AIG + LRAT PIPELINE?>.
 
 During the process of helping to implement \bvdecide{},
 I read through quite a lot of the source code of the state-of-the-art SMT solver Bitwuzla~\citep{niemetz2023bitwuzla},
@@ -104,21 +109,29 @@ have all of Bitwuzla be formally verified in Lean.
 For this, we needed to verify hundreds of bitvector rewrites that Bitwuzla performs internally in order to simplify the problem statement,
 as well as to have support for arrays and floating point.
 
+\paragraph{Parametric Bitvector Solving}
 In thinking about the problem of being able to successfully formally verify a Bitwuzla-scale SMT solver,
 I began to give the area of \emph{parametric bitvector solving} some more thought.
 This is a fledgling area of SMT solving, where one develops decision procedures to decide propositions over bitvectors of a \emph{symbolic width}.
 Why should we care? Because an LLVM rewrite must be correct at \emph{every} register width: \texttt{i8}, \texttt{i32}, and even \texttt{i1729}.
 Prior art in this area depended on reductions to undecidable theories (such as nonlinear integer arithmetic)~\citep{bit-precise-parametric-bv},
-or an incomplete set of equivalence relations which are used to explore equalities~\citep{pichora2003automated,bjorner1998deciding},
-OR INDUCTIVE FAMILIES OF BOOLEAN CIRCUITS THAT SPLIT A BASE CASE FROM AN INDUCTIVE STEP~\citep{gupta1993parametric,gupta1993representation}.
+or an incomplete set of equivalence relations which are used to explore equalities~\citep{pichora2003automated,bjorner1998deciding}.
 Moreover, in practice, tools like Alive2~\citep{lopes2021alive2} and Hydra~\citep{hydra} that actually \emph{do} attempt to solve the parametric bitvector problem simply invoked a fixed-width bitvector solver by enumerating all possible widths, and bitblasting each one separately.
 I felt that we could do better, and that it must be possible to design principled algorithms for parametric bitvector problems.
 Toward this, for a fragment of bitvector theory, I devise a method, inspired by the classical automata-theoretic treatment of Presburger arithmetic~\citep{Büchi1960,automata-strike-back},
 that shows that the truth of fragments of parametric bitvector theory can be expressed as a safety property on a finite automaton.
 This allows a reduction to the mature theory of model checking~\citep{biere1999symbolic,bradley2011sat}, and in particular, tools like $k$-induction~\citep{sheeran2000checking} and regular language emptiness
 (\cref{ch:mono-width}) can be used to create a sound and complete decision procedure for this fragment.
-AUTOMATA-BASED TOOLS FOR PRESBURGER ARITHMETIC ARE DECADES OLD AND FAST~\citep{henriksen1995mona,boigelot2004counting,chocholaty2024mata};
-BUT NONE ARE MECHANIZED, AND NONE RUN INSIDE A PROOF ASSISTANT, WHICH IS EXACTLY WHERE WE NEED THEM.
+Automata based tools for Presburger arithmetic are very well studied~\citep{henriksen1995mona,boigelot2004counting,chocholaty2024mata},
+but none are mechanized and run in a proof assistant where we need them.
+So, it was important that we mechanized the automata-theoretic machinery in Lean,
+and then use it to build a verified decision procedure for parametric bitvectors.
+Moreover, the automata theoretic viewpoint lended itself to using $k$-induction \cite{sheeran2000checking},
+which is a technique for verifying safety properties that can make use of a SAT solver as an oracle.
+This lets us reuse the machinery developed for LRAT certificate checking to have a fast and verified solver.
+
+
+\paragraph{Multi-Width Parametric Bitvector Solving}
 However, the above technique only handled bitvectors with \emph{one} symbolic width.
 Next, by an encoding trick that writes widths as bitmasks,
 I show that any formula over $n$ symbolic widths reduces to an equisatisfiable formula at a single width (\cref{ch:multi-width}),
@@ -135,12 +148,11 @@ Moreover, tools that use SymFPU's circuits, such as Bitwuzla, only support ``sta
 due to a lack of confidence in the correctness of the circuits for all possible configurations of exponent and mantissa sizes.
 However, machine learning has been pushing small, exotic floating point formats into production hardware~\citep{fp8fordl,flops},
 making it all the more important that we have a verified floating point solver that guarantees correctness at all widths, not just the common ones.
-HOW DOES ONE GAIN CONFIDENCE IN FLOATING POINT CODE TODAY? BY TESTING AGAINST A REFERENCE IMPLEMENTATION~\citep{testfloat,softfloat},
-OR BY SANITIZING KERNELS AS THEY RUN~\citep{openai2026fpsan}; BOTH FIND BUGS, AND NEITHER CAN SHOW THEIR ABSENCE.
 
 % These circuits are very complex, and have never been formally verified before.
 % Moreover, all tools ... <write about how other SMT solvers have bugs in them>.
 
+\paragraph{Verified Floating Point Solving}
 Toward a verified floating point solver that guarantees correctness across all floating point formats,
 it was important that the solver be verified at all widths, not just the common ones.
 However, there's a question of what even the \emph{specification} of floating point is,
@@ -158,6 +170,12 @@ but I was able to mechanize our understanding of the SymFPU algorithms and prove
 To do this, I built theories for rational numbers, packed and unpacked floating point numbers, and the relationship between these components.
 Overall, this work culminated in the first verified floating point bitblaster,
 which proves the correctness of most of the SymFPU algorithms, and guarantees correctness at all floating point formats.
+% One can gain a lot of confidence by cross-verifying results agianst a reference implementation~\citep{testfloat,softfloat},
+% and this is indeed how Lean's reference floating point semantics are tested.
+% We perform a similar cross-verification in our floating point solver,
+% in order to gain trust that we really have mechanized the SMT-LIB \qffp{} theory correctly.
+% Moreover, we also perform a cross-verification of our floating point solver against Bitwuzla's floating point solver,
+% which is the state-of-the-art floating point solver in practice.
 
 
 Overall, in order to build toward the goal of ``verified production-grade compilation'',
