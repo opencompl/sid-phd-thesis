@@ -19,18 +19,16 @@ nonlinear arithmetic over parametric bitvectors, finishing the goal of a fully m
 
 The parametric solvers of this thesis (\cref{ch:mono-width,ch:multi-width})
 decide the \emph{linear-bitwise} fragment of the parametric bitvector theory.
-I have an unpublished sketch showing that \emph{nonlinear} arithmetic in the
-parametric bitvector theory is decidable, by a reduction to the first-order
-theory of the 2-adic integers, and, conversely, that integrating \emph{any}
-bitwise operation into such a theory immediately leads to
+I have an unpublished sketch showing that by adding multiplication into this fragment,
+such a theory immediately leads to
 undecidability.\footnote{%
-\url{https://pixel-druid.com/articles/non-linear-theory-of-2-adics-does-not-mix-with-bitwise-operations}}
-This implies that the nonlinear arithmetic fragment of the parametric
-bitvector theory is (maximally) decidable: to write incomplete solvers for
-the full theory, one must first build a complete solver for the nonlinear
-arithmetic fragment, which can then be mixed with bitwise operations via
-theory combination.
+\url{https://pixel-druid.com/articles/non-linear-theory-of-2-adics-does-not-mix-with-bitwise-operations}}.
+The key intuition is that one can encode Hilbert's 10th into this fragment,
+but crucially, relies on having access to both arithmetic (to encode the Diophantine equation),
+and bitwise operations (to encode the sizes needed for non-overflow as bitvector masks).
 
+This opens a question: What if we focus on the nonlinear arithmetic fragment of the parametric bitvector theory?
+A large fragment of this theory is captured by the 2-adic integers, $\Z_2$.
 Toward this, I propose implementing a cylindrical algebraic decomposition (CAD) solver for the 2-adics.
 While the decidability of the full first-order theory of the 2-adics has been known in theory since the
 1960s~\citep{ax1966diophantine}, that result was not algorithmic. A CAD-style
